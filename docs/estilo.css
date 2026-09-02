@@ -231,6 +231,9 @@ canvas.firma {
   justify-content: space-between;
   gap: 0.75rem;
 }
+/* `display:flex` le gana al display:none del atributo hidden, y la barra
+   quedaba visible y vacia cuando no hay nada en cola. */
+.cola[hidden] { display: none; }
 .cola button {
   flex: 0 0 auto;
   border: 1px solid var(--alerta);
