@@ -205,3 +205,11 @@ canvas.firma {
 /* Fondo blanco para la banda: el logo de Casella viene en JPEG con fondo blanco
    y sobre el gris de la app quedaba como un recuadro pegoteado. */
 .ute { background: #ffffff; border-top: 1px solid var(--borde); }
+
+/* ---- pie del operador ----
+   "Cómo se usa" primero, que es lo único que el operario puede llegar a
+   necesitar. El panel va abajo y en gris: existe para que la oficina lo
+   encuentre desde el celular, no para invitar a nadie a entrar. */
+.pie { text-align: center; padding: 0.25rem 1.25rem 1.5rem; }
+.pie a { display: block; color: var(--acento); font-weight: 600; padding: 0.5rem; }
+.pie a.secundario { color: var(--tenue); font-weight: 500; font-size: 0.88rem; }
