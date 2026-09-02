@@ -172,3 +172,28 @@ canvas.firma {
 .chip.alerta { background: var(--alerta-suave); color: var(--alerta); }
 
 .cargando { text-align: center; color: var(--tenue); padding: 2.5rem 1rem; }
+
+/* ---- banda de la UTE ----
+   Las dos constructoras que forman la UTE de la obra. Aparece al pie del
+   operador y en la pantalla de certificación, que es la que se muestra afuera.
+   Si un archivo falta, el logo se oculta solo en vez de dejar el ícono roto. */
+.ute {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+}
+.ute img { height: 34px; width: auto; display: block; }
+.ute .separador { width: 1px; height: 26px; background: var(--borde); }
+.ute .leyenda {
+  width: 100%;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+/* El logo de INGECO es blanco sobre azul: necesita su propio fondo. */
+.ute img.ingeco { background: #1e3a8a; padding: 0.25rem 0.4rem; border-radius: 0.25rem; }

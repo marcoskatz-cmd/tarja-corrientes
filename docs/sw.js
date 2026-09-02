@@ -5,11 +5,11 @@
  * lo que no se puede enviar queda en la cola de IndexedDB, no acá.
  */
 
-const CACHE = 'tarja-v2';
+const CACHE = 'tarja-v3';
 // Los assets van con ?v=N igual que en el HTML: si no coinciden, el caché
 // nunca da en el clavo y además el navegador se queda con la versión vieja.
 // Al publicar un cambio hay que subir el número acá y en los tres HTML.
-const V = '2';
+const V = '3';
 const ARMAZON = [
   './',
   './index.html',
@@ -17,6 +17,8 @@ const ARMAZON = [
   './ayuda.html',
   './manifest.json',
   './icono.svg',
+  './logos/casella.png',
+  './logos/ingeco.png',
   './estilo.css?v=' + V,
   './api.js?v=' + V,
   './camara.js?v=' + V,
