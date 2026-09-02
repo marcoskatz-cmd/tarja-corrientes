@@ -128,7 +128,9 @@ img.previa { width: 100%; border-radius: 0.9rem; display: block; }
   border-color: var(--alerta); background: var(--alerta-suave); color: var(--alerta);
 }
 
-input[type="number"], input[type="text"], textarea, select {
+/* Todos los inputs, no una lista de tipos: el ancho intrínseco de un input que
+   se escape de la lista desborda la pantalla en el celular. */
+input, textarea, select {
   width: 100%;
   padding: 0.85rem;
   font-size: 1.05rem;
