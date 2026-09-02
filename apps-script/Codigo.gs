@@ -20,7 +20,12 @@ function doGet(e) {
   try {
     // Setup y ping son GET porque se ejecutan a mano, una sola vez, desde el navegador.
     if (p.action === 'ping') {
-      return json_({ ok: true, ts: tsStr_(), version: prop_('VERSION') || 'dev' });
+      return json_({
+        ok: true,
+        ts: tsStr_(),
+        instalado: !!prop_('SHEET_ID'),
+        pines_definidos: !!prop_('PIN_ADMIN')
+      });
     }
     if (p.action === 'setup') {
       exigirBootstrap_(p);
@@ -47,10 +52,12 @@ function doGet(e) {
  */
 function exigirBootstrap_(p) {
   var k = prop_('BOOTSTRAP_KEY');
-  if (!k) {
-    k = uuid_();
-    setProp_('BOOTSTRAP_KEY', k);
-    log_('bootstrap', 'CLAVE_GENERADA', '', '');
+  // La ventana de instalación se cierra cuando la planilla existe, no cuando se
+  // genera la clave: si la atamos a la clave, un setup que falla a mitad de
+  // camino deja el sistema trabado con una clave que nadie llegó a ver.
+  if (!prop_('SHEET_ID')) {
+    // Sin log_ acá: la hoja LOG todavía no existe.
+    if (!k) setProp_('BOOTSTRAP_KEY', uuid_());
     return;
   }
   if (String(p.key || '') !== k) {

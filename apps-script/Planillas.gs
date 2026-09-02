@@ -61,6 +61,9 @@ function setupCompleto_() {
     });
   }
 
+  // El log recién acá: antes de este punto la hoja LOG puede no existir todavía.
+  log_('bootstrap', 'SETUP', JSON.stringify(creado), '');
+
   return {
     creado: creado,
     sheetId: prop_('SHEET_ID'),
