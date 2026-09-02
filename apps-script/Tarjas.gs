@@ -1,12 +1,16 @@
 /**
  * Ciclo de vida de la tarja: apertura, checklist, cierre y firma.
  *
- * Reglas duras que se aplacan acá y en ningún otro lado:
+ * Reglas duras que se aplican acá y en ningún otro lado:
  *  - Una sola tarja por equipo y día (LockService + chequeo, para que la cola
  *    offline no genere duplicados al reintentar).
  *  - Delta de horómetro calculado en el servidor. Se rechazan negativos y > 14 h.
  *  - Fecha y hora del servidor, nunca del dispositivo.
- *  - Tarja firmada = congelada. Solo se anula desde el panel.
+ *  - Tarja cerrada = congelada. Solo se anula desde el panel.
+ *
+ * El operador firma AL ABRIR la jornada, no al cerrarla: así queda asentado
+ * quién se hizo cargo de la máquina desde el primer minuto, y el cierre se
+ * reduce a la foto del horómetro final.
  */
 
 function equipoPorNombre_(nombre) {
@@ -40,7 +44,6 @@ function estadoDelDia_(p) {
     paso: !t ? 'apertura' : (String(t.estado) === 'abierta' ? 'cierre' : 'listo'),
     horom_sugerido: Number(equipo.horom_actual || 0),
     items: itemsDe_(equipo.equipo, 'diaria'),
-    motivos: activos_('MOTIVOS').map(function (m) { return m.motivo; }),
     operadores: operadoresDe_(equipo.equipo),
     ultimas: ultimasTarjas_(equipo.equipo, 5)
   };
@@ -116,6 +119,9 @@ function abrirTarja_(p) {
       return { ya_existia: true, tarja: tarjaPublica_(existente) };
     }
 
+    var operador = String(p.operador || '').trim();
+    if (operador.length < 3) throw new Error('Falta el nombre del operador.');
+    if (!p.firma) throw new Error('Falta la firma del operador.');
     if (!p.foto_monitor) throw new Error('Falta la foto del monitor de cabina.');
     if (!p.foto_horometro) throw new Error('Falta la foto del horómetro.');
 
@@ -138,17 +144,18 @@ function abrirTarja_(p) {
     var id = uuid_();
     var urlMonitor = guardarFoto_(p.foto_monitor, equipo.equipo, fecha, 'monitor');
     var urlHorom = guardarFoto_(p.foto_horometro, equipo.equipo, fecha, 'horometro-ini');
+    var urlFirma = guardarFoto_(p.firma, equipo.equipo, fecha, 'firma');
 
     agregar_('TARJAS', {
-      id: id, equipo: equipo.equipo, fecha: fecha, estado: 'abierta', operador: '',
+      id: id, equipo: equipo.equipo, fecha: fecha, estado: 'abierta', operador: operador,
       horom_ini: horomIni, horom_fin: '', horas: '',
       foto_monitor: urlMonitor, foto_horom_ini: urlHorom, foto_horom_fin: '',
       horom_ini_sugerido: sugerido,
       correccion_horom: corregido ? 'SI' : 'NO',
       motivo_correccion: corregido ? String(p.motivo_correccion).trim() : '',
       excepcion: corregido ? 'SI' : 'NO',
-      firma: '', lat: p.lat || '', lon: p.lon || '',
-      ts_apertura: tsStr_(), ts_cierre: '', ts_firma: '',
+      firma: urlFirma, lat: p.lat || '', lon: p.lon || '',
+      ts_apertura: tsStr_(), ts_cierre: '', ts_firma: tsStr_(),
       anulada_ts: '', anulada_por: '', anulada_motivo: ''
     });
 
@@ -183,6 +190,8 @@ function abrirTarja_(p) {
       }
     });
 
+    recordarOperador_(operador, equipo.equipo);
+
     if (corregido) {
       log_('operador', 'CORRECCION_HOROMETRO',
         equipo.equipo + ' ' + fecha + ': ' + sugerido + ' -> ' + horomIni,
@@ -198,8 +207,8 @@ function abrirTarja_(p) {
 // ---------- cierre y firma ----------
 
 /**
- * Cierra la jornada: horómetro final, detenciones y firma. Una vez firmada,
- * la tarja queda congelada.
+ * Cierra la jornada. Solo horómetro final: la firma y el operador ya quedaron
+ * asentados en la apertura. Una vez cerrada, la tarja queda congelada.
  */
 function cerrarTarja_(p) {
   var lock = LockService.getScriptLock();
@@ -212,10 +221,6 @@ function cerrarTarja_(p) {
       return { ya_estaba_cerrada: true, tarja: tarjaPublica_(t) };
     }
     if (!p.foto_horometro) throw new Error('Falta la foto del horómetro final.');
-
-    var operador = String(p.operador || '').trim();
-    if (!operador) throw new Error('Falta el nombre del operador.');
-    if (!p.firma) throw new Error('Falta la firma del operador.');
 
     var horomFin = Number(p.horom_fin);
     var horomIni = Number(t.horom_ini);
@@ -230,48 +235,23 @@ function cerrarTarja_(p) {
         CFG.MAX_HORAS_JORNADA + ' h permitidas en una jornada. Revisá el valor.');
     }
 
-    var detenciones = p.detenciones || [];
-    var motivos = {};
-    activos_('MOTIVOS').forEach(function (m) { motivos[String(m.motivo)] = String(m.imputable); });
-    var horasDet = 0;
-    detenciones.forEach(function (d) {
-      if (!motivos[d.motivo]) throw new Error('El motivo de detención "' + d.motivo + '" no está en la lista.');
-      var h = Number(d.horas);
-      if (!isFinite(h) || h <= 0) throw new Error('Las horas de la detención "' + d.motivo + '" no son válidas.');
-      horasDet += h;
-    });
-
     var fecha = String(t.fecha);
     var urlHorom = guardarFoto_(p.foto_horometro, t.equipo, fecha, 'horometro-fin');
-    var urlFirma = guardarFoto_(p.firma, t.equipo, fecha, 'firma');
-
-    detenciones.forEach(function (d) {
-      agregar_('DETENCIONES', {
-        id: uuid_(), tarja_id: t.id, equipo: t.equipo, fecha: fecha,
-        motivo: d.motivo,
-        // La imputabilidad se congela al momento de la carga: si mañana se
-        // reclasifica un motivo, los meses ya certificados no se mueven solos.
-        imputable: motivos[d.motivo],
-        horas: Number(d.horas), ts: tsStr_()
-      });
-    });
 
     actualizar_('TARJAS', t._fila, {
-      estado: 'cerrada', operador: operador,
+      estado: 'cerrada',
       horom_fin: horomFin, horas: horas,
-      foto_horom_fin: urlHorom, firma: urlFirma,
-      ts_cierre: tsStr_(), ts_firma: tsStr_()
+      foto_horom_fin: urlHorom,
+      ts_cierre: tsStr_()
     });
 
     var eq = equipoPorNombre_(t.equipo);
     actualizar_('EQUIPOS', eq._fila, { horom_actual: horomFin });
-    recordarOperador_(operador, t.equipo);
 
     return {
       ya_estaba_cerrada: false,
       tarja: tarjaPublica_(buscarPorId_('TARJAS', t.id)),
-      horas: horas,
-      horas_detencion: horasDet
+      horas: horas
     };
   } finally {
     lock.releaseLock();

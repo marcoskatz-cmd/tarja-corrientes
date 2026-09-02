@@ -10,7 +10,14 @@ const nav = document.getElementById('nav');
 const hRol = document.getElementById('hRol');
 const btnSalir = document.getElementById('btnSalir');
 
-let sesion = JSON.parse(sessionStorage.getItem('sesion') || 'null');
+// En localStorage y no en sessionStorage: la sesión dura 8 h y se pierde al
+// cerrar la pestaña, que es justo lo que pasa al saltar desde la app al panel.
+let sesion = leerSesion();
+
+function leerSesion() {
+  try { return JSON.parse(localStorage.getItem('sesion') || 'null'); }
+  catch (e) { return null; }
+}
 
 const PESTANAS = [
   { id: 'hoy', titulo: 'Hoy', ver: verHoy },
@@ -38,6 +45,9 @@ function conError(fn) {
 }
 
 async function pedir(action, datos = {}) {
+  // Sin esta guarda, una sesión caída explotaba como "Cannot read properties of
+  // null" en vez de mandar al PIN, que es lo que hay que hacer.
+  if (!sesion || !sesion.token) throw new Error('La sesión venció. Ingresá el PIN de nuevo.');
   return API.llamar(action, { ...datos, token: sesion.token });
 }
 
@@ -69,7 +79,7 @@ function pantallaLogin() {
     entrar.textContent = 'Verificando…';
     try {
       sesion = await API.llamar('login', { pin: pin.value });
-      sessionStorage.setItem('sesion', JSON.stringify(sesion));
+      localStorage.setItem('sesion', JSON.stringify(sesion));
       iniciar();
     } catch (e) {
       entrar.disabled = false;
@@ -82,7 +92,7 @@ function pantallaLogin() {
 
 function salir() {
   sesion = null;
-  sessionStorage.removeItem('sesion');
+  localStorage.removeItem('sesion');
   pantallaLogin();
 }
 btnSalir.onclick = salir;
@@ -216,9 +226,6 @@ async function verEquipo() {
     <div class="tarjeta">
       <div class="fila"><span class="tenue">Horómetro acumulado</span><span><strong>${d.horom_actual}</strong></span></div>
       <div class="fila"><span class="tenue">Horas del mes</span><span>${d.horas_mes.toFixed(1)} h</span></div>
-      <div class="fila"><span class="tenue">Horas detenido</span><span>${d.horas_detencion_mes.toFixed(1)} h</span></div>
-      <div class="fila"><span class="tenue">Disponibilidad</span><span>${
-        d.disponibilidad === null ? '—' : (d.disponibilidad * 100).toFixed(0) + '%'}</span></div>
       <div class="fila"><span class="tenue">Días con tarja</span><span>${d.dias_con_tarja}</span></div>
       <div class="fila" style="border:0"><span class="tenue">Próximo service</span><span>${d.proximo_service || '—'}</span></div>
     </div>
@@ -293,11 +300,6 @@ async function verCertificacion() {
         <div class="fila" style="border:0;padding-top:0"><strong style="font-size:1.05rem">${e.equipo}</strong></div>
         <div class="fila"><span class="tenue">Horas trabajadas</span><span><strong>${e.horas_trabajadas.toFixed(1)} h</strong></span></div>
         <div class="fila"><span class="tenue">Días con tarja</span><span>${e.dias_con_tarja}</span></div>
-        <div class="fila"><span class="tenue">Detenido — imputable a INGECO</span><span>${e.detenciones.INGECO.toFixed(1)} h</span></div>
-        <div class="fila"><span class="tenue">Detenido — imputable al comitente</span><span>${e.detenciones.COMITENTE.toFixed(1)} h</span></div>
-        <div class="fila"><span class="tenue">Detenido — causa externa</span><span>${e.detenciones.EXTERNA.toFixed(1)} h</span></div>
-        <div class="fila"><span class="tenue">Detenido — a clasificar</span>
-          <span>${e.detenciones.A_CLASIFICAR ? `<span class="chip alerta">${e.detenciones.A_CLASIFICAR.toFixed(1)} h</span>` : '0.0 h'}</span></div>
         <div class="fila" style="border:0"><span class="tenue">Jornadas con horómetro corregido</span>
           <span>${e.jornadas_excepcion ? `<span class="chip alerta">${e.jornadas_excepcion}</span>` : '0'}</span></div>
         ${e.dias_sin_firmar ? aviso('alerta', `${e.dias_sin_firmar} jornada(s) quedaron abiertas y no cuentan como horas.`) : ''}

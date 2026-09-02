@@ -5,6 +5,11 @@
  * solamente cuando el paso está completo, y nada de texto libre donde alcance
  * con elegir. El objetivo es que alguien que nunca la vio termine en menos de
  * un minuto sin leer nada.
+ *
+ * Orden de la jornada:
+ *   Apertura → nombre y firma → foto del monitor → foto del horómetro con el
+ *              valor tipeado debajo → checklist
+ *   Cierre   → foto del horómetro con el valor tipeado debajo
  */
 
 const app = document.getElementById('app');
@@ -45,6 +50,15 @@ function conError(fn) {
   };
 }
 
+/**
+ * La hora exacta la pone el backend al guardar. Acá solo sellamos la de
+ * referencia del dispositivo junto a la fecha del servidor, que es la que manda.
+ */
+function horaLocalDelServidor() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
 // ---------- arranque ----------
 
 async function iniciar() {
@@ -71,7 +85,7 @@ async function iniciar() {
   }
 
   hFecha.textContent = estado.fecha;
-  if (estado.paso === 'apertura') return aperturaFoto();
+  if (estado.paso === 'apertura') return aperturaIdentidad();
   if (estado.paso === 'cierre') return cierreFoto();
   return pantallaListo();
 }
@@ -100,13 +114,13 @@ function pantallaSelector() {
   });
 }
 
-// ---------- pantalla de cámara reutilizable ----------
+// ---------- cámara ----------
 
 /**
- * Muestra la cámara en vivo con una indicación corta y devuelve el dataURL
- * de la foto tomada. La galería no se ofrece a propósito.
+ * Cámara en vivo con una indicación corta. La galería no se ofrece a propósito:
+ * la foto tiene que ser del momento.
  */
-function pantallaCamara({ titulo, indicacion, alTomar }) {
+function pantallaCamara({ titulo, indicacion, alTomar, conValor }) {
   pintar(`
     <h2>${titulo}</h2>
     <div class="camara tarjeta" style="padding:0">
@@ -131,17 +145,10 @@ function pantallaCamara({ titulo, indicacion, alTomar }) {
   btn.onclick = conError(async () => {
     const foto = Camara.capturar(vid, estado.equipo, estado.fecha + ' ' + horaLocalDelServidor());
     Camara.cerrarCamara();
-    confirmarFoto(foto, titulo, alTomar, () => pantallaCamara({ titulo, indicacion, alTomar }));
+    const volver = () => pantallaCamara({ titulo, indicacion, alTomar, conValor });
+    if (conValor) return conValor(foto, volver);
+    confirmarFoto(foto, titulo, alTomar, volver);
   });
-}
-
-/**
- * La hora exacta la pone el backend al guardar. Acá solo sellamos la de
- * referencia del dispositivo junto a la fecha del servidor, que es la que manda.
- */
-function horaLocalDelServidor() {
-  const d = new Date();
-  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
 function confirmarFoto(foto, titulo, alAceptar, alRepetir) {
@@ -158,10 +165,87 @@ function confirmarFoto(foto, titulo, alAceptar, alRepetir) {
   document.getElementById('rep').onclick = alRepetir;
 }
 
-// ---------- apertura ----------
+// ---------- apertura: nombre y firma ----------
 
-function aperturaFoto() {
+function aperturaIdentidad() {
   borrador = { checklist: [] };
+  pintar(`
+    <h2>¿Quién maneja hoy?</h2>
+    <p class="ayuda">Se carga una sola vez, al empezar la jornada.</p>
+    <div class="tarjeta">
+      <label>Nombre y apellido</label>
+      <input type="text" id="nombre" list="ops" autocomplete="off" placeholder="Escribí tu nombre">
+      <datalist id="ops">${estado.operadores.map((o) => `<option value="${o}">`).join('')}</datalist>
+      <label>Firma</label>
+      <canvas class="firma" id="canvas"></canvas>
+      <div style="height:.5rem"></div>
+      <button class="secundaria" id="borrar">Borrar la firma</button>
+    </div>
+    <button class="principal" id="seguir" disabled>Continuar</button>
+  `);
+
+  const canvas = document.getElementById('canvas');
+  const nombre = document.getElementById('nombre');
+  const seguir = document.getElementById('seguir');
+  const ctx = canvas.getContext('2d');
+  let firmado = false;
+
+  // El canvas se dimensiona en pixeles reales para que la firma no salga borrosa.
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#14212c';
+
+  let dibujando = false;
+  const punto = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); dibujando = true;
+    const p = punto(e); ctx.beginPath(); ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dibujando) return;
+    e.preventDefault();
+    const p = punto(e);
+    ctx.lineTo(p.x, p.y); ctx.stroke();
+    firmado = true; revisar();
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => {
+    canvas.addEventListener(ev, () => { dibujando = false; });
+  });
+
+  function revisar() { seguir.disabled = !(firmado && nombre.value.trim().length >= 3); }
+  nombre.oninput = revisar;
+
+  document.getElementById('borrar').onclick = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    firmado = false; revisar();
+  };
+
+  seguir.onclick = conError(() => {
+    // Fondo blanco: el canvas transparente se ve negro al abrirlo desde Drive.
+    const plano = document.createElement('canvas');
+    plano.width = canvas.width; plano.height = canvas.height;
+    const c2 = plano.getContext('2d');
+    c2.fillStyle = '#ffffff';
+    c2.fillRect(0, 0, plano.width, plano.height);
+    c2.drawImage(canvas, 0, 0);
+
+    borrador.operador = nombre.value.trim();
+    borrador.firma = plano.toDataURL('image/jpeg', 0.8);
+    aperturaMonitor();
+  });
+}
+
+// ---------- apertura: fotos ----------
+
+function aperturaMonitor() {
   pantallaCamara({
     titulo: 'Foto del monitor de cabina',
     indicacion: 'Con el equipo en marcha y después de un minuto de funcionamiento. Que se vea toda la pantalla.',
@@ -173,46 +257,57 @@ function aperturaHorometro() {
   pantallaCamara({
     titulo: 'Foto del horómetro',
     indicacion: 'Que se lean los números completos.',
-    alTomar: (foto) => { borrador.foto_horometro = foto; aperturaValor(); }
+    conValor: (foto, repetir) => aperturaValor(foto, repetir)
   });
 }
 
-function aperturaValor() {
+/** La foto arriba y el número debajo: se tipea mirando la misma imagen. */
+function aperturaValor(foto, repetir) {
   pintar(`
-    <h2>Horómetro de apertura</h2>
-    <p class="ayuda">Viene del cierre de la jornada anterior. Si no coincide con lo que muestra la máquina, corregilo.</p>
-    <div class="tarjeta">
-      <label>Valor</label>
-      <input type="number" id="valor" inputmode="decimal" step="0.1" value="${estado.horom_sugerido}" readonly>
+    <h2>Horómetro</h2>
+    <img class="previa" src="${foto}" alt="Foto del horómetro">
+    <div style="height:.5rem"></div>
+    <button class="secundaria" id="rep">Repetir la foto</button>
+    <div class="tarjeta" style="margin-top:.9rem">
+      <label>Escribí lo que muestra el horómetro</label>
+      <input type="number" id="valor" inputmode="decimal" step="0.1" value="${estado.horom_sugerido}">
+      <div class="tenue" style="margin-top:.5rem">
+        Viene del cierre de ayer: <strong>${estado.horom_sugerido}</strong>.
+      </div>
       <div id="bloqueMotivo" hidden>
         <label>¿Por qué no coincide?</label>
         <textarea id="motivo" rows="3" placeholder="Ej.: el horómetro se reinició, o el valor anterior se cargó mal"></textarea>
       </div>
-      <div style="height:.8rem"></div>
-      <button class="secundaria" id="btnCorregir">Corregir el valor</button>
     </div>
     <button class="principal" id="seguir">Continuar</button>
   `);
+
   const valor = document.getElementById('valor');
   const bloque = document.getElementById('bloqueMotivo');
-  document.getElementById('btnCorregir').onclick = () => {
-    valor.readOnly = false;
-    valor.focus();
-    bloque.hidden = false;
-    document.getElementById('btnCorregir').hidden = true;
+  // El motivo aparece solo cuando el número deja de coincidir: sin pedirlo antes
+  // de tiempo, y sin dejar pasar una corrección sin explicación.
+  valor.oninput = () => {
+    bloque.hidden = Math.abs(Number(valor.value) - estado.horom_sugerido) <= 0.001;
   };
+  document.getElementById('rep').onclick = repetir;
+
   document.getElementById('seguir').onclick = conError(() => {
     const v = Number(valor.value);
-    if (!isFinite(v) || v < 0) throw new Error('El valor del horómetro no es válido.');
-    const motivo = document.getElementById('motivo') ? document.getElementById('motivo').value.trim() : '';
-    if (Math.abs(v - estado.horom_sugerido) > 0.001 && !motivo) {
-      throw new Error('Cambiaste el valor: hace falta explicar por qué.');
+    if (valor.value === '' || !isFinite(v) || v < 0) {
+      throw new Error('El valor del horómetro no es válido.');
     }
+    const motivo = document.getElementById('motivo').value.trim();
+    if (Math.abs(v - estado.horom_sugerido) > 0.001 && !motivo) {
+      throw new Error('El número no coincide con el de ayer: hace falta explicar por qué.');
+    }
+    borrador.foto_horometro = foto;
     borrador.horom_ini = v;
     borrador.motivo_correccion = motivo;
     aperturaChecklist();
   });
 }
+
+// ---------- apertura: checklist ----------
 
 function aperturaChecklist() {
   const items = estado.items;
@@ -247,47 +342,48 @@ function aperturaChecklist() {
       : `Falta responder (${items.filter((i) => respuestas[i.orden]).length}/${items.length})`;
   }
 
+  function armarDetalle(item, r, detalle) {
+    detalle.hidden = false;
+    detalle.innerHTML = `
+      <label>Foto del problema</label>
+      ${r.foto ? `<img class="previa" src="${r.foto}" alt="">` : ''}
+      <div style="height:.5rem"></div>
+      <button class="secundaria btn-foto">${r.foto ? 'Repetir la foto' : 'Sacar foto'}</button>
+      <label>¿Qué pasa?</label>
+      <textarea rows="2" placeholder="Contá brevemente qué viste">${r.comentario || ''}</textarea>`;
+    const txt = detalle.querySelector('textarea');
+    txt.oninput = () => { r.comentario = txt.value.trim(); revisar(); };
+    detalle.querySelector('.btn-foto').onclick = conError(() => {
+      pantallaCamara({
+        titulo: item.item,
+        indicacion: 'Que se vea el problema.',
+        alTomar: (f) => aperturaChecklistRestaurar(respuestas, f, item.orden)
+      });
+    });
+  }
+
   app.querySelectorAll('.item').forEach((div) => {
     const orden = Number(div.dataset.orden);
     const item = items.find((i) => i.orden === orden);
     const detalle = div.querySelector('.detalle');
     div.querySelectorAll('.opciones button').forEach((b) => {
-      b.onclick = conError(async () => {
+      b.onclick = () => {
         div.querySelectorAll('.opciones button').forEach((x) => x.classList.remove('elegido'));
         b.classList.add('elegido');
-        const est = b.dataset.estado;
-        if (est === 'OK') {
+        if (b.dataset.estado === 'OK') {
           respuestas[orden] = { orden, estado: 'OK' };
           detalle.hidden = true;
           detalle.innerHTML = '';
           return revisar();
         }
         respuestas[orden] = { orden, estado: 'PROBLEMA', foto: null, comentario: '' };
-        detalle.hidden = false;
-        detalle.innerHTML = `
-          <label>Foto del problema</label>
-          <button class="secundaria btn-foto">Sacar foto</button>
-          <label>¿Qué pasa?</label>
-          <textarea rows="2" placeholder="Contá brevemente qué viste"></textarea>`;
-        const txt = detalle.querySelector('textarea');
-        txt.oninput = () => { respuestas[orden].comentario = txt.value.trim(); revisar(); };
-        detalle.querySelector('.btn-foto').onclick = conError(() => {
-          const guardado = { html: app.innerHTML, scroll: window.scrollY };
-          pantallaCamara({
-            titulo: item.item,
-            indicacion: 'Que se vea el problema.',
-            alTomar: (foto) => {
-              // Volvemos al checklist con todo lo ya respondido en su lugar.
-              aperturaChecklistRestaurar(respuestas, foto, orden);
-            }
-          });
-        });
+        armarDetalle(item, respuestas[orden], detalle);
         revisar();
-      });
+      };
     });
   });
 
-  // Si venimos de sacar una foto, repintamos el checklist con lo ya cargado.
+  // Si venimos de sacar una foto de un problema, repintamos con lo ya cargado.
   if (aperturaChecklist._restaurar) {
     const { previas, foto, orden } = aperturaChecklist._restaurar;
     aperturaChecklist._restaurar = null;
@@ -297,28 +393,8 @@ function aperturaChecklist() {
       const r = respuestas[i.orden];
       if (!r) return;
       const div = app.querySelector(`.item[data-orden="${i.orden}"]`);
-      const b = div.querySelector(r.estado === 'OK' ? '.ok' : '.problema');
-      b.classList.add('elegido');
-      if (r.estado === 'PROBLEMA') {
-        const detalle = div.querySelector('.detalle');
-        detalle.hidden = false;
-        detalle.innerHTML = `
-          <label>Foto del problema</label>
-          ${r.foto ? `<img class="previa" src="${r.foto}" alt="">` : ''}
-          <div style="height:.5rem"></div>
-          <button class="secundaria btn-foto">${r.foto ? 'Repetir la foto' : 'Sacar foto'}</button>
-          <label>¿Qué pasa?</label>
-          <textarea rows="2">${r.comentario || ''}</textarea>`;
-        const txt = detalle.querySelector('textarea');
-        txt.oninput = () => { r.comentario = txt.value.trim(); revisar(); };
-        detalle.querySelector('.btn-foto').onclick = conError(() => {
-          pantallaCamara({
-            titulo: i.item,
-            indicacion: 'Que se vea el problema.',
-            alTomar: (f) => aperturaChecklistRestaurar(respuestas, f, i.orden)
-          });
-        });
-      }
+      div.querySelector(r.estado === 'OK' ? '.ok' : '.problema').classList.add('elegido');
+      if (r.estado === 'PROBLEMA') armarDetalle(i, r, div.querySelector('.detalle'));
     });
     revisar();
   }
@@ -326,15 +402,16 @@ function aperturaChecklist() {
   btn.onclick = conError(async () => {
     btn.disabled = true;
     btn.textContent = 'Enviando…';
-    borrador.checklist = items.map((i) => respuestas[i.orden]);
     const u = Camara.ubicacion();
     const r = await API.enviar('abrir', {
       equipo: estado.equipo,
+      operador: borrador.operador,
+      firma: borrador.firma,
       foto_monitor: borrador.foto_monitor,
       foto_horometro: borrador.foto_horometro,
       horom_ini: borrador.horom_ini,
       motivo_correccion: borrador.motivo_correccion,
-      checklist: borrador.checklist,
+      checklist: items.map((i) => respuestas[i.orden]),
       lat: u ? u.lat : '', lon: u ? u.lon : ''
     });
     if (r.encolado) return pantallaGuardadoSinSeñal();
@@ -350,174 +427,52 @@ function aperturaChecklistRestaurar(previas, foto, orden) {
 // ---------- cierre ----------
 
 function cierreFoto() {
-  borrador = { detenciones: [] };
+  borrador = {};
   pantallaCamara({
     titulo: 'Foto del horómetro al terminar',
     indicacion: 'Que se lean los números completos.',
-    alTomar: (foto) => { borrador.foto_horometro = foto; cierreValor(); }
+    conValor: (foto, repetir) => cierreValor(foto, repetir)
   });
 }
 
-function cierreValor() {
+function cierreValor(foto, repetir) {
   const ini = Number(estado.tarja.horom_ini);
   pintar(`
     <h2>Horómetro al terminar</h2>
-    <p class="ayuda">A la mañana marcaba <strong>${ini}</strong>.</p>
-    <div class="tarjeta">
-      <label>Valor</label>
+    <img class="previa" src="${foto}" alt="Foto del horómetro">
+    <div style="height:.5rem"></div>
+    <button class="secundaria" id="rep">Repetir la foto</button>
+    <div class="tarjeta" style="margin-top:.9rem">
+      <label>Escribí lo que muestra el horómetro</label>
       <input type="number" id="valor" inputmode="decimal" step="0.1" placeholder="Ej.: ${(ini + 8).toFixed(1)}">
-      <div id="calc" class="tenue" style="margin-top:.6rem"></div>
+      <div class="tenue" style="margin-top:.5rem">A la mañana marcaba <strong>${ini}</strong>.</div>
+      <div id="calc" class="tenue" style="margin-top:.4rem"></div>
     </div>
-    <button class="principal" id="seguir" disabled>Continuar</button>
+    <button class="principal" id="enviar" disabled>Cerrar la jornada</button>
   `);
+
   const valor = document.getElementById('valor');
   const calc = document.getElementById('calc');
-  const seguir = document.getElementById('seguir');
+  const enviar = document.getElementById('enviar');
+  document.getElementById('rep').onclick = repetir;
+
   valor.oninput = () => {
     const v = Number(valor.value);
     const h = v - ini;
-    if (!valor.value || !isFinite(v)) { calc.textContent = ''; seguir.disabled = true; return; }
-    if (h < 0) { calc.textContent = 'El valor es menor que el de la mañana. Revisalo.'; seguir.disabled = true; return; }
-    if (h > 14) { calc.textContent = `Daría ${h.toFixed(1)} h de trabajo, más de las 14 permitidas. Revisalo.`; seguir.disabled = true; return; }
+    if (!valor.value || !isFinite(v)) { calc.textContent = ''; enviar.disabled = true; return; }
+    if (h < 0) { calc.textContent = 'El valor es menor que el de la mañana. Revisalo.'; enviar.disabled = true; return; }
+    if (h > 14) { calc.textContent = `Daría ${h.toFixed(1)} h de trabajo, más de las 14 permitidas. Revisalo.`; enviar.disabled = true; return; }
     calc.textContent = `Serían ${h.toFixed(1)} horas de trabajo.`;
-    seguir.disabled = false;
-  };
-  seguir.onclick = conError(() => {
-    borrador.horom_fin = Number(valor.value);
-    cierreDetenciones();
-  });
-}
-
-function cierreDetenciones() {
-  pintar(`
-    <h2>¿Hubo detenciones?</h2>
-    <p class="ayuda">Solo si la máquina estuvo parada durante la jornada.</p>
-    <div id="lista" class="filas"></div>
-    <div style="height:.5rem"></div>
-    <button class="secundaria" id="agregar">Agregar una detención</button>
-    <div style="height:.9rem"></div>
-    <button class="principal" id="seguir">Continuar</button>
-  `);
-  const lista = document.getElementById('lista');
-
-  function repintar() {
-    lista.innerHTML = borrador.detenciones.map((d, i) => `
-      <div class="fila">
-        <span>${d.motivo} — <strong>${d.horas} h</strong></span>
-        <button class="tenue" style="border:0;background:none" data-i="${i}">Quitar</button>
-      </div>`).join('');
-    lista.querySelectorAll('[data-i]').forEach((b) => {
-      b.onclick = () => { borrador.detenciones.splice(Number(b.dataset.i), 1); repintar(); };
-    });
-  }
-  repintar();
-
-  document.getElementById('agregar').onclick = () => {
-    const cont = document.createElement('div');
-    cont.className = 'tarjeta';
-    cont.innerHTML = `
-      <label>Motivo</label>
-      <select id="mot">
-        <option value="">Elegí un motivo</option>
-        ${estado.motivos.map((m) => `<option>${m}</option>`).join('')}
-      </select>
-      <label>Horas parado</label>
-      <input type="number" id="hs" inputmode="decimal" step="0.5" min="0.5">
-      <div style="height:.8rem"></div>
-      <button class="principal" id="ok" disabled>Agregar</button>`;
-    lista.after(cont);
-    const mot = cont.querySelector('#mot');
-    const hs = cont.querySelector('#hs');
-    const ok = cont.querySelector('#ok');
-    const revisar = () => { ok.disabled = !(mot.value && Number(hs.value) > 0); };
-    mot.onchange = revisar; hs.oninput = revisar;
-    ok.onclick = () => {
-      borrador.detenciones.push({ motivo: mot.value, horas: Number(hs.value) });
-      cont.remove();
-      repintar();
-    };
-  };
-
-  document.getElementById('seguir').onclick = () => cierreFirma();
-}
-
-function cierreFirma() {
-  pintar(`
-    <h2>Firma del operador</h2>
-    <p class="ayuda">Una vez firmada, la tarja del día queda cerrada.</p>
-    <div class="tarjeta">
-      <label>Nombre y apellido</label>
-      <input type="text" id="nombre" list="ops" autocomplete="off" placeholder="Escribí tu nombre">
-      <datalist id="ops">${estado.operadores.map((o) => `<option value="${o}">`).join('')}</datalist>
-      <label>Firma</label>
-      <canvas class="firma" id="canvas"></canvas>
-      <div style="height:.5rem"></div>
-      <button class="secundaria" id="borrar">Borrar la firma</button>
-    </div>
-    <button class="principal" id="enviar" disabled>Cerrar y firmar la jornada</button>
-  `);
-
-  const canvas = document.getElementById('canvas');
-  const nombre = document.getElementById('nombre');
-  const enviar = document.getElementById('enviar');
-  const ctx = canvas.getContext('2d');
-  let firmado = false;
-
-  // El canvas se dimensiona en pixeles reales para que la firma no salga borrosa.
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#14212c';
-
-  let dibujando = false;
-  const punto = (e) => {
-    const r = canvas.getBoundingClientRect();
-    const t = e.touches ? e.touches[0] : e;
-    return { x: t.clientX - r.left, y: t.clientY - r.top };
-  };
-  const empezar = (e) => { e.preventDefault(); dibujando = true; const p = punto(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-  const mover = (e) => {
-    if (!dibujando) return;
-    e.preventDefault();
-    const p = punto(e);
-    ctx.lineTo(p.x, p.y); ctx.stroke();
-    firmado = true; revisar();
-  };
-  const terminar = () => { dibujando = false; };
-  ['pointerdown'].forEach((ev) => canvas.addEventListener(ev, empezar));
-  ['pointermove'].forEach((ev) => canvas.addEventListener(ev, mover));
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => canvas.addEventListener(ev, terminar));
-
-  function revisar() { enviar.disabled = !(firmado && nombre.value.trim().length >= 3); }
-  nombre.oninput = revisar;
-
-  document.getElementById('borrar').onclick = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    firmado = false; revisar();
+    enviar.disabled = false;
   };
 
   enviar.onclick = conError(async () => {
     enviar.disabled = true;
     enviar.textContent = 'Enviando…';
-    // Fondo blanco: el canvas transparente se ve negro en el PDF de Drive.
-    const plano = document.createElement('canvas');
-    plano.width = canvas.width; plano.height = canvas.height;
-    const c2 = plano.getContext('2d');
-    c2.fillStyle = '#ffffff';
-    c2.fillRect(0, 0, plano.width, plano.height);
-    c2.drawImage(canvas, 0, 0);
-
     const r = await API.enviar('cerrar', {
       tarja_id: estado.tarja.id,
-      foto_horometro: borrador.foto_horometro,
-      horom_fin: borrador.horom_fin,
-      detenciones: borrador.detenciones,
-      operador: nombre.value.trim(),
-      firma: plano.toDataURL('image/jpeg', 0.8)
+      foto_horometro: foto,
+      horom_fin: Number(valor.value)
     });
     if (r.encolado) return pantallaGuardadoSinSeñal();
     iniciar();
@@ -536,7 +491,7 @@ function pantallaGuardadoSinSeñal() {
 function pantallaListo() {
   const t = estado.tarja;
   pintar(`
-    ${aviso('info', `Jornada cerrada y firmada. ${t.horas} horas registradas.`)}
+    ${aviso('info', `Jornada cerrada. ${t.horas} horas registradas.`)}
     <div class="tarjeta">
       <div class="fila"><span class="tenue">Operador</span><span>${t.operador || '—'}</span></div>
       <div class="fila"><span class="tenue">Horómetro</span><span>${t.horom_ini} → ${t.horom_fin}</span></div>

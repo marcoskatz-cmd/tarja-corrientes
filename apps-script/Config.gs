@@ -2,7 +2,7 @@
  * Tarja Diaria y Checklist de Equipos — Obra Corrientes
  * Configuración central: nombres de hojas, encabezados esperados y constantes.
  *
- * Toda la política editable (ítems del checklist, motivos de detención, equipos)
+ * Toda la política editable (ítems del checklist, equipos)
  * vive en la planilla, no acá. Este archivo solo define la ESTRUCTURA que la app
  * espera encontrar, para poder auto-diagnosticar desvíos.
  */
@@ -40,15 +40,9 @@ var HOJAS = {
   CHECKLIST_ITEMS: [
     'orden', 'equipo', 'item', 'frecuencia', 'activo'
   ],
-  DETENCIONES: [
-    'id', 'tarja_id', 'equipo', 'fecha', 'motivo', 'imputable', 'horas', 'ts'
-  ],
   PENDIENTES: [
     'id', 'tarja_id', 'equipo', 'fecha_apertura', 'orden', 'item',
     'comentario', 'foto', 'estado', 'fecha_cierre', 'motivo_cierre', 'cerrado_por'
-  ],
-  MOTIVOS: [
-    'motivo', 'imputable', 'activo'
   ],
   EQUIPOS: [
     'equipo', 'tipo', 'token_dispositivo', 'consumo_min', 'consumo_max',
@@ -76,17 +70,6 @@ var SEED = {
     [5, 'PC200', 'Tren de rodaje: cadenas, rodillos y zapatas', 'diaria', 'SI'],
     [5, 'HIDROMEK', 'Neumáticos y estado de cubiertas', 'diaria', 'SI'],
     [6, '', 'Seguridad de cabina: cinturón, matafuego, alarma de retroceso y luces', 'diaria', 'SI']
-  ],
-  MOTIVOS: [
-    ['Lluvia', 'EXTERNA', 'SI'],
-    ['Falta de frente de trabajo', 'COMITENTE', 'SI'],
-    ['Orden de la conducción de obra', 'COMITENTE', 'SI'],
-    ['Espera de otro equipo', 'COMITENTE', 'SI'],
-    ['Rotura del equipo', 'INGECO', 'SI'],
-    ['Falta de combustible', 'INGECO', 'SI'],
-    ['Falta de operador', 'COMITENTE', 'SI'],
-    ['Feriado o parada programada', 'EXTERNA', 'SI'],
-    ['Otro', 'A_CLASIFICAR', 'SI']
   ]
 };
 

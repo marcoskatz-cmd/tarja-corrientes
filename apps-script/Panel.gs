@@ -21,6 +21,26 @@ function definirPin_(rol, pin) {
   setProp_('PIN_' + rol.toUpperCase(), hash_(pin));
 }
 
+/**
+ * Las sesiones van en Script Properties, no en CacheService: el caché lo puede
+ * vaciar Google cuando quiere, así que la sesión de 8 h no estaba garantizada y
+ * al panel se le caía la sesión sin motivo aparente.
+ * El contador de intentos fallidos sí puede vivir en caché: si se pierde, lo
+ * único que pasa es que el bloqueo arranca de nuevo.
+ */
+function purgarSesiones_() {
+  var ahora = ahora_().getTime();
+  var todas = PROP.getProperties();
+  Object.keys(todas).forEach(function (k) {
+    if (k.indexOf('SES_') !== 0) return;
+    try {
+      if (Number(JSON.parse(todas[k]).exp) < ahora) PROP.deleteProperty(k);
+    } catch (e) {
+      PROP.deleteProperty(k);
+    }
+  });
+}
+
 function login_(p) {
   var pin = String(p.pin || '');
   var claveIntentos = 'intentos';
@@ -39,20 +59,29 @@ function login_(p) {
     throw new Error('PIN incorrecto.');
   }
   CACHE.remove(claveIntentos);
+  purgarSesiones_();
 
   var token = uuid_();
-  CACHE.put('sesion_' + token, rol, CFG.PANEL_SESION_HORAS * 3600);
+  setProp_('SES_' + token, JSON.stringify({
+    rol: rol,
+    exp: ahora_().getTime() + CFG.PANEL_SESION_HORAS * 3600000
+  }));
   log_(rol, 'LOGIN_PANEL', '', '');
   return { token: token, rol: rol, horas: CFG.PANEL_SESION_HORAS };
 }
 
 function sesion_(p, rolRequerido) {
-  var rol = p.token ? CACHE.get('sesion_' + p.token) : null;
-  if (!rol) throw new Error('La sesión venció. Ingresá el PIN de nuevo.');
-  if (rolRequerido === 'admin' && rol !== 'admin') {
+  var crudo = p.token ? prop_('SES_' + p.token) : null;
+  var s = null;
+  try { s = crudo ? JSON.parse(crudo) : null; } catch (e) { s = null; }
+  if (!s || Number(s.exp) < ahora_().getTime()) {
+    if (crudo) PROP.deleteProperty('SES_' + p.token);
+    throw new Error('La sesión venció. Ingresá el PIN de nuevo.');
+  }
+  if (rolRequerido === 'admin' && s.rol !== 'admin') {
     throw new Error('Esta acción es exclusiva de administración.');
   }
-  return rol;
+  return s.rol;
 }
 
 // ---------- vistas ----------
@@ -129,19 +158,13 @@ function panelEquipo_(p) {
            String(t.fecha).indexOf(mes) === 0 &&
            String(t.estado) !== 'anulada';
   });
-  var det = leer_('DETENCIONES').filter(function (d) {
-    return String(d.equipo) === String(e.equipo) && String(d.fecha).indexOf(mes) === 0;
-  });
   var horas = tarjas.reduce(function (s, t) { return s + Number(t.horas || 0); }, 0);
-  var horasDet = det.reduce(function (s, d) { return s + Number(d.horas || 0); }, 0);
   return {
     equipo: e.equipo, tipo: e.tipo, mes: mes,
     horom_actual: Number(e.horom_actual || 0),
     proximo_service: e.proximo_service,
     consumo_banda: [Number(e.consumo_min || 0), Number(e.consumo_max || 0)],
     horas_mes: horas,
-    horas_detencion_mes: horasDet,
-    disponibilidad: horas + horasDet > 0 ? horas / (horas + horasDet) : null,
     dias_con_tarja: tarjas.length,
     historial: tarjas.sort(function (a, b) {
       return String(a.fecha) < String(b.fecha) ? 1 : -1;
@@ -159,7 +182,8 @@ function panelEquipo_(p) {
 
 /**
  * Certificación: consolidado mensual que se cruza contra el certificado de
- * prestaciones. Horas trabajadas y detenciones separadas por imputabilidad.
+ * prestaciones. Al certificarse por hora efectiva, la prueba son las horas de
+ * horómetro; las detenciones se sacaron del alcance por decisión de Marcos.
  */
 function panelCertificacion_(p) {
   sesion_(p);
@@ -172,21 +196,12 @@ function panelCertificacion_(p) {
                String(t.fecha).indexOf(mes) === 0 &&
                String(t.estado) !== 'anulada';
       });
-      var det = leer_('DETENCIONES').filter(function (d) {
-        return String(d.equipo) === String(e.equipo) && String(d.fecha).indexOf(mes) === 0;
-      });
-      var porImputable = { INGECO: 0, COMITENTE: 0, EXTERNA: 0, A_CLASIFICAR: 0 };
-      det.forEach(function (d) {
-        var k = String(d.imputable) || 'A_CLASIFICAR';
-        porImputable[k] = (porImputable[k] || 0) + Number(d.horas || 0);
-      });
       return {
         equipo: e.equipo,
         horas_trabajadas: tarjas.reduce(function (s, t) { return s + Number(t.horas || 0); }, 0),
         dias_con_tarja: tarjas.length,
         dias_sin_firmar: tarjas.filter(function (t) { return String(t.estado) === 'abierta'; }).length,
-        jornadas_excepcion: tarjas.filter(function (t) { return String(t.excepcion) === 'SI'; }).length,
-        detenciones: porImputable
+        jornadas_excepcion: tarjas.filter(function (t) { return String(t.excepcion) === 'SI'; }).length
       };
     })
   };
