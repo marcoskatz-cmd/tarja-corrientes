@@ -170,6 +170,7 @@ function panelEquipo_(p) {
       return String(a.fecha) < String(b.fecha) ? 1 : -1;
     }).map(function (t) {
       return {
+        id: t.id,
         fecha: String(t.fecha), estado: t.estado, horas: t.horas,
         operador: t.operador, excepcion: String(t.excepcion) === 'SI',
         motivo_correccion: t.motivo_correccion,

@@ -33,6 +33,11 @@ function doGet(e) {
       res.bootstrap_key = prop_('BOOTSTRAP_KEY');
       return json_({ ok: true, data: res });
     }
+    if (p.action === 'borrar_tarja') {
+      exigirBootstrap_(p);
+      // Sin aplicar=si solo informa qué se borraría. Mirar antes de borrar.
+      return json_({ ok: true, data: borrarTarja_(p.equipo, p.fecha, String(p.aplicar) === 'si') });
+    }
     if (p.action === 'set_pin') {
       exigirBootstrap_(p);
       definirPin_(p.rol, p.pin);

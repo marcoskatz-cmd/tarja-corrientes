@@ -233,7 +233,8 @@ async function verEquipo() {
     <h2>Historial del mes</h2>
     <div class="tarjeta scroll-x">
       <table>
-        <thead><tr><th>Fecha</th><th class="num">Horas</th><th>Operador</th><th>Fotos</th></tr></thead>
+        <thead><tr><th>Fecha</th><th class="num">Horas</th><th>Operador</th><th>Fotos</th>${
+          esAdmin() ? '<th></th>' : ''}</tr></thead>
         <tbody>
           ${d.historial.map((h) => `
             <tr>
@@ -245,7 +246,10 @@ async function verEquipo() {
                 ${h.foto_horom_ini ? `<a href="${h.foto_horom_ini}" target="_blank" rel="noopener">inicio</a> ` : ''}
                 ${h.foto_horom_fin ? `<a href="${h.foto_horom_fin}" target="_blank" rel="noopener">fin</a>` : ''}
               </td>
-            </tr>`).join('') || '<tr><td colspan="4" class="tenue">Sin jornadas este mes.</td></tr>'}
+              ${esAdmin() ? `<td>${h.estado === 'anulada'
+                ? '<span class="chip alerta">anulada</span>'
+                : `<button class="chip alerta" style="border:0" data-anular="${h.id}">Anular</button>`}</td>` : ''}
+            </tr>`).join('') || `<tr><td colspan="5" class="tenue">Sin jornadas este mes.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -255,6 +259,38 @@ async function verEquipo() {
   });
   const bh = document.getElementById('btnHorom');
   if (bh) bh.onclick = () => formCorregirHorometro(bh, d);
+  app.querySelectorAll('[data-anular]').forEach((b) => {
+    b.onclick = () => formAnular(b, b.dataset.anular);
+  });
+}
+
+/**
+ * Anular no borra: la fila queda con el motivo y sale del consolidado. El
+ * borrado real no se expone acá a propósito.
+ */
+function formAnular(boton, tarjaId) {
+  const fila = boton.closest('tr');
+  const cont = document.createElement('tr');
+  cont.innerHTML = `<td colspan="5">
+    <label>Motivo de la anulación</label>
+    <textarea id="m" rows="2" placeholder="Queda registrado en el log"></textarea>
+    <div style="height:.6rem"></div>
+    <button class="principal" id="ok" disabled>Confirmar la anulación</button>
+    <div style="height:.4rem"></div>
+    <button class="secundaria" id="no">Mejor no</button>
+  </td>`;
+  fila.after(cont);
+  boton.hidden = true;
+  const m = cont.querySelector('#m');
+  const ok = cont.querySelector('#ok');
+  m.oninput = () => { ok.disabled = !m.value.trim(); };
+  cont.querySelector('#no').onclick = () => { cont.remove(); boton.hidden = false; };
+  ok.onclick = conError(async () => {
+    ok.disabled = true;
+    ok.textContent = 'Anulando…';
+    await pedir('anular', { tarja_id: tarjaId, motivo: m.value.trim() });
+    abrir('equipo');
+  });
 }
 
 function formCorregirHorometro(boton, d) {

@@ -61,3 +61,12 @@ Para publicar una versión nueva del backend:
     clasp update-deployment -d "vN" AKfycbxwItT5p7VrxMVr-v0PCOJ0vb5Qm5p6GmZmdTPJAh3-43FiQkp84OQnT3nf6lJY8zIe2w
 
 `clasp create-deployment` genera una URL distinta y deja la PWA apuntando a la vieja.
+
+## Anular vs borrar
+
+- **Anular** (panel → Equipo → historial, solo administración): la fila queda en la planilla con
+  el motivo y en el `LOG`, y sale del consolidado. Es el camino normal para un registro operativo.
+- **Borrar de verdad**: solo para limpiar datos de prueba. No se expone en el panel. Va por
+  `<URL>?action=borrar_tarja&key=<clave>&equipo=PC200&fecha=2026-09-02`, que **informa qué se
+  borraría sin tocar nada**; recién agregando `&aplicar=si` elimina las filas, manda las fotos a
+  la papelera de Drive y devuelve el horómetro del equipo al valor previo.
