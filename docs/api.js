@@ -15,20 +15,34 @@ const API_URL = window.TARJA_API_URL;
 
 // ---------- HTTP ----------
 
+const SIN_SEÑAL = 'No se pudo conectar con el servidor.';
+
 async function llamar(action, datos = {}) {
-  const r = await fetch(API_URL, {
-    method: 'POST',
-    // text/plain evita el preflight CORS, que Apps Script no contesta.
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...datos })
-  });
-  if (!r.ok) throw new Error('No se pudo conectar con el servidor.');
-  const j = await r.json();
+  let r;
+  try {
+    r = await fetch(API_URL, {
+      method: 'POST',
+      // text/plain evita el preflight CORS, que Apps Script no contesta.
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...datos })
+    });
+  } catch (e) {
+    // Sin red, fetch tira un TypeError, no devuelve una respuesta fallada.
+    // Si esto no se traduce a SIN_SEÑAL, la cola offline nunca se activa y el
+    // operario pierde la carga justo cuando más falta le hace guardarla.
+    throw new Error(SIN_SEÑAL);
+  }
+  if (!r.ok) throw new Error(SIN_SEÑAL);
+  let j;
+  try {
+    j = await r.json();
+  } catch (e) {
+    // Respuesta cortada a la mitad: tampoco es un rechazo del servidor.
+    throw new Error(SIN_SEÑAL);
+  }
   if (!j.ok) throw new Error(j.error || 'Ocurrió un error inesperado.');
   return j.data;
 }
-
-const SIN_SEÑAL = 'No se pudo conectar con el servidor.';
 
 // ---------- IndexedDB ----------
 
