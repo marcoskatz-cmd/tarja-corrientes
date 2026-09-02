@@ -186,6 +186,10 @@ canvas.firma {
   padding: 1rem;
 }
 .ute img { height: 34px; width: auto; display: block; }
+/* El archivo de INGECO trae mucho margen azul horneado adentro, así que a la
+   misma altura su marca se ve la mitad de grande que la de Casella. Se compensa
+   dándole más alto para que las dos pesen ópticamente igual. */
+.ute img.ingeco { height: 50px; }
 /* Oculto por defecto: si el logo anterior no cargó y se quitó del DOM, el
    separador deja de tener un img delante y no queda una raya suelta. */
 .ute .separador { display: none; width: 1px; height: 26px; background: var(--borde); }
@@ -198,5 +202,6 @@ canvas.firma {
   text-transform: uppercase;
   color: var(--tenue);
 }
-/* El logo de INGECO es blanco sobre azul: necesita su propio fondo. */
-.ute img.ingeco { background: #1e3a8a; padding: 0.25rem 0.4rem; border-radius: 0.25rem; }
+/* Fondo blanco para la banda: el logo de Casella viene en JPEG con fondo blanco
+   y sobre el gris de la app quedaba como un recuadro pegoteado. */
+.ute { background: #ffffff; border-top: 1px solid var(--borde); }
