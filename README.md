@@ -70,3 +70,7 @@ Para publicar una versión nueva del backend:
   `<URL>?action=borrar_tarja&key=<clave>&equipo=PC200&fecha=2026-09-02`, que **informa qué se
   borraría sin tocar nada**; recién agregando `&aplicar=si` elimina las filas, manda las fotos a
   la papelera de Drive y devuelve el horómetro del equipo al valor previo.
+
+La lista de operadores se aprende sola de las firmas, así que al borrar una tarja de prueba
+queda el nombre suelto. Para sacar a los que no tienen ninguna tarja:
+`<URL>?action=limpiar_operadores&key=<clave>` (informa) y `&aplicar=si` (borra).

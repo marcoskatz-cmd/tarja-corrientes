@@ -60,3 +60,29 @@ function borrarFilas_(nombre, filas) {
     .sort(function (a, b) { return b - a; })
     .forEach(function (n) { sh.deleteRow(n); });
 }
+
+/**
+ * Saca de OPERADORES a los que no tienen ninguna tarja. La lista se aprende
+ * sola de las firmas, así que al borrar una tarja de prueba queda el nombre
+ * suelto sugiriéndose a los operarios de verdad.
+ */
+function limpiarOperadores_(aplicar) {
+  var conTarja = {};
+  leer_('TARJAS').forEach(function (t) {
+    conTarja[String(t.operador).trim().toUpperCase()] = true;
+  });
+  var huerfanos = leer_('OPERADORES').filter(function (o) {
+    return !conTarja[String(o.nombre).trim().toUpperCase()];
+  });
+  if (!aplicar) {
+    return { simulacion: true, se_borrarian: huerfanos.map(function (o) {
+      return o.nombre + ' (' + o.equipo + ')';
+    }) };
+  }
+  borrarFilas_('OPERADORES', huerfanos);
+  if (huerfanos.length) {
+    log_('mantenimiento', 'LIMPIEZA_OPERADORES',
+         huerfanos.map(function (o) { return o.nombre; }).join(', '), 'sin tarjas');
+  }
+  return { simulacion: false, borrados: huerfanos.length };
+}

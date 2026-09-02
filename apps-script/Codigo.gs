@@ -38,6 +38,10 @@ function doGet(e) {
       // Sin aplicar=si solo informa qué se borraría. Mirar antes de borrar.
       return json_({ ok: true, data: borrarTarja_(p.equipo, p.fecha, String(p.aplicar) === 'si') });
     }
+    if (p.action === 'limpiar_operadores') {
+      exigirBootstrap_(p);
+      return json_({ ok: true, data: limpiarOperadores_(String(p.aplicar) === 'si') });
+    }
     if (p.action === 'set_pin') {
       exigirBootstrap_(p);
       definirPin_(p.rol, p.pin);
