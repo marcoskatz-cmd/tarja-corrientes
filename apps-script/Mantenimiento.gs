@@ -43,14 +43,27 @@ function borrarTarja_(equipoNombre, fecha, aplicar) {
     try { DriveApp.getFileById(m[0]).setTrashed(true); papelera++; } catch (e) { /* ya no está */ }
   });
 
-  // El cierre había adelantado el horómetro del equipo: se vuelve atrás.
-  actualizar_('EQUIPOS', equipo._fila, { horom_actual: Number(t.horom_ini_sugerido || 0) });
+  // El horómetro del equipo se RECALCULA sobre lo que queda, no se restaura al
+  // valor previo de esta tarja: borrando varias del mismo día en orden, cada
+  // una restauraba el suyo y el equipo terminaba con el valor más alto.
+  actualizar_('EQUIPOS', equipo._fila, { horom_actual: horomSegunTarjas_(equipo.equipo) });
 
   log_('mantenimiento', 'BORRADO_TARJA',
        t.equipo + ' ' + String(t.fecha) + ' (' + resp.length + ' respuestas, ' +
        pend.length + ' pendientes, ' + papelera + ' fotos)', 'dato de prueba');
 
   return { simulacion: false, borrado: detalle, fotos_a_papelera: papelera };
+}
+
+/** Último horómetro de cierre que queda registrado para el equipo, o 0. */
+function horomSegunTarjas_(equipoNombre) {
+  var cerradas = leer_('TARJAS').filter(function (t) {
+    return String(t.equipo).toUpperCase() === String(equipoNombre).toUpperCase() &&
+           String(t.estado) === 'cerrada' && t.horom_fin !== '';
+  }).sort(function (a, b) {
+    return String(a.ts_cierre) < String(b.ts_cierre) ? -1 : 1;
+  });
+  return cerradas.length ? Number(cerradas[cerradas.length - 1].horom_fin) : 0;
 }
 
 /** Borra de abajo hacia arriba para que no se corran los números de fila. */
@@ -85,4 +98,30 @@ function limpiarOperadores_(aplicar) {
          huerfanos.map(function (o) { return o.nombre; }).join(', '), 'sin tarjas');
   }
   return { simulacion: false, borrados: huerfanos.length };
+}
+
+/**
+ * Recalcula el horómetro de todos los equipos a partir de las tarjas que
+ * quedaron. Sirve para dejar consistente después de limpiar datos de prueba.
+ */
+function recalcularHorometros_(aplicar) {
+  var cambios = activos_('EQUIPOS').map(function (e) {
+    return {
+      equipo: e.equipo, _fila: e._fila,
+      actual: Number(e.horom_actual || 0),
+      correcto: horomSegunTarjas_(e.equipo)
+    };
+  }).filter(function (c) { return c.actual !== c.correcto; });
+
+  if (!aplicar) {
+    return { simulacion: true, se_corregirian: cambios.map(function (c) {
+      return c.equipo + ': ' + c.actual + ' -> ' + c.correcto;
+    }) };
+  }
+  cambios.forEach(function (c) {
+    actualizar_('EQUIPOS', c._fila, { horom_actual: c.correcto });
+    log_('mantenimiento', 'RECALCULO_HOROMETRO',
+         c.equipo + ': ' + c.actual + ' -> ' + c.correcto, 'sin tarjas que lo respalden');
+  });
+  return { simulacion: false, corregidos: cambios.length };
 }

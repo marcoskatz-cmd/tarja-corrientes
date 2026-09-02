@@ -42,6 +42,10 @@ function doGet(e) {
       exigirBootstrap_(p);
       return json_({ ok: true, data: limpiarOperadores_(String(p.aplicar) === 'si') });
     }
+    if (p.action === 'recalcular_horometros') {
+      exigirBootstrap_(p);
+      return json_({ ok: true, data: recalcularHorometros_(String(p.aplicar) === 'si') });
+    }
     if (p.action === 'set_pin') {
       exigirBootstrap_(p);
       definirPin_(p.rol, p.pin);

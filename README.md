@@ -74,3 +74,7 @@ Para publicar una versión nueva del backend:
 La lista de operadores se aprende sola de las firmas, así que al borrar una tarja de prueba
 queda el nombre suelto. Para sacar a los que no tienen ninguna tarja:
 `<URL>?action=limpiar_operadores&key=<clave>` (informa) y `&aplicar=si` (borra).
+
+Si después de borrar queda el horómetro de un equipo adelantado:
+`<URL>?action=recalcular_horometros&key=<clave>` (informa) y `&aplicar=si` (corrige). Lo
+recalcula sobre el último cierre que quede registrado.
