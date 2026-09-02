@@ -48,3 +48,16 @@ En la planilla:
 
 Si una columna cambia de nombre o de lugar, el panel lo avisa en la pestaña **Hoy**
 en vez de fallar en silencio.
+
+## IDs de deploy
+
+- scriptId: `1Wy1fyO5CIKrVu7rixUM4KB-0JH-IVLl3zF-Arm7bFBD5lrHxizgBI-6d`
+- deploymentId (URL estable, **no crear uno nuevo**):
+  `AKfycbxwItT5p7VrxMVr-v0PCOJ0vb5Qm5p6GmZmdTPJAh3-43FiQkp84OQnT3nf6lJY8zIe2w`
+
+Para publicar una versión nueva del backend:
+
+    clasp push
+    clasp update-deployment -d "vN" AKfycbxwItT5p7VrxMVr-v0PCOJ0vb5Qm5p6GmZmdTPJAh3-43FiQkp84OQnT3nf6lJY8zIe2w
+
+`clasp create-deployment` genera una URL distinta y deja la PWA apuntando a la vieja.

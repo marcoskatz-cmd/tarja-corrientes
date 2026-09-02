@@ -39,6 +39,13 @@ function setupCompleto_() {
       sh.setFrozenRows(1);
       sh.getRange(1, 1, 1, enc.length).setFontWeight('bold');
     }
+    // Fechas y timestamps como texto plano: así la planilla guarda exactamente
+    // lo que escribimos y no reinterpreta el formato según la configuración.
+    enc.forEach(function (col, i) {
+      if (col.indexOf('fecha') === 0 || col === 'ts' || col.indexOf('ts_') === 0) {
+        sh.getRange(2, i + 1, sh.getMaxRows() - 1, 1).setNumberFormat('@');
+      }
+    });
     if (SEED[nombre] && sh.getLastRow() === 1) {
       sh.getRange(2, 1, SEED[nombre].length, SEED[nombre][0].length).setValues(SEED[nombre]);
     }
@@ -104,6 +111,18 @@ function hoja_(nombre) {
   return sh;
 }
 
+/**
+ * Sheets convierte solo un "2026-09-02" en un objeto Date al escribirlo. Si no
+ * lo normalizamos al leer, toda comparación de fechas contra un string falla en
+ * silencio. Las columnas de fecha vuelven siempre como texto yyyy-MM-dd y las de
+ * timestamp como yyyy-MM-dd HH:mm:ss.
+ */
+function normalizarFecha_(col, v) {
+  if (!(v instanceof Date)) return v;
+  var esTs = col === 'ts' || col.indexOf('ts_') === 0;
+  return Utilities.formatDate(v, CFG.TZ, esTs ? 'yyyy-MM-dd HH:mm:ss' : 'yyyy-MM-dd');
+}
+
 /** Devuelve todas las filas como objetos {columna: valor}, más _fila (1-based). */
 function leer_(nombre) {
   var sh = hoja_(nombre);
@@ -113,7 +132,7 @@ function leer_(nombre) {
   var datos = sh.getRange(2, 1, ultima - 1, cols.length).getValues();
   return datos.map(function (fila, i) {
     var o = { _fila: i + 2 };
-    cols.forEach(function (c, j) { o[c] = fila[j]; });
+    cols.forEach(function (c, j) { o[c] = normalizarFecha_(c, fila[j]); });
     return o;
   });
 }
