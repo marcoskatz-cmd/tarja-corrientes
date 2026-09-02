@@ -10,9 +10,13 @@
  *   Apertura → nombre y firma → foto del monitor → foto del horómetro con el
  *              valor tipeado debajo → checklist
  *   Cierre   → foto del horómetro con el valor tipeado debajo
+ *
+ * Se pueden abrir varias jornadas en el mismo día, de a una por vez: hay que
+ * cerrar la anterior antes de empezar otra.
  */
 
 const app = document.getElementById('app');
+const colaAviso = document.getElementById('colaAviso');
 const hEquipo = document.getElementById('hEquipo');
 const hFecha = document.getElementById('hFecha');
 const btnCambiar = document.getElementById('btnCambiar');
@@ -59,6 +63,25 @@ function horaLocalDelServidor() {
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
+// ---------- cargas guardadas sin señal ----------
+
+function pintarCola(pendientes) {
+  if (!pendientes.length) { colaAviso.hidden = true; return; }
+  colaAviso.hidden = false;
+  const n = pendientes.length;
+  colaAviso.innerHTML = `
+    <span>${n} carga${n === 1 ? '' : 's'} guardada${n === 1 ? '' : 's'} en el celular,
+      sin enviar todavía.</span>
+    <button id="btnEnviarCola">Enviar ahora</button>`;
+  document.getElementById('btnEnviarCola').onclick = async (ev) => {
+    ev.target.disabled = true;
+    ev.target.textContent = 'Enviando…';
+    const ok = await API.sincronizar(() => {});
+    if (ok) iniciar(); else { ev.target.disabled = false; ev.target.textContent = 'Enviar ahora'; }
+  };
+}
+API.alCambiarCola(pintarCola);
+
 // ---------- arranque ----------
 
 async function iniciar() {
@@ -71,6 +94,14 @@ async function iniciar() {
 
   // Antes que nada, mandar lo que haya quedado en cola sin señal.
   await API.sincronizar(() => {});
+  const cola = await API.pendientesEnCola();
+  pintarCola(cola);
+
+  // Si la carga de este equipo todavía está en cola, el servidor no la conoce y
+  // diría "abrí la jornada" de nuevo. Hay que frenar acá, o el operario carga
+  // todo dos veces.
+  const propia = cola.filter((c) => c.equipo === eq);
+  if (propia.length) return pantallaEnCola(propia[0]);
 
   try {
     estado = await API.llamar('estado', { equipo: eq });
@@ -87,7 +118,7 @@ async function iniciar() {
   hFecha.textContent = estado.fecha;
   if (estado.paso === 'apertura') return aperturaIdentidad();
   if (estado.paso === 'cierre') return cierreFoto();
-  return pantallaListo();
+  return pantallaListo();  // jornadas cerradas hoy, ninguna abierta
 }
 
 // ---------- selector de equipo ----------
@@ -413,7 +444,7 @@ function aperturaChecklist() {
       motivo_correccion: borrador.motivo_correccion,
       checklist: items.map((i) => respuestas[i.orden]),
       lat: u ? u.lat : '', lon: u ? u.lon : ''
-    });
+    }, estado.equipo);
     if (r.encolado) return pantallaGuardadoSinSeñal();
     iniciar();
   });
@@ -473,7 +504,7 @@ function cierreValor(foto, repetir) {
       tarja_id: estado.tarja.id,
       foto_horometro: foto,
       horom_fin: Number(valor.value)
-    });
+    }, estado.equipo);
     if (r.encolado) return pantallaGuardadoSinSeñal();
     iniciar();
   });
@@ -483,20 +514,52 @@ function cierreValor(foto, repetir) {
 
 function pantallaGuardadoSinSeñal() {
   pintar(
-    aviso('alerta', 'Se guardó en el celular porque no hay señal. Se va a enviar solo cuando vuelva. No hace falta cargarlo de nuevo.') +
+    aviso('alerta', '<strong>Guardado en el celular.</strong> No hay señal, así que se va a enviar solo cuando vuelva. No hace falta cargarlo de nuevo: podés cerrar la app.') +
     `<button class="principal" onclick="location.reload()">Entendido</button>`
   );
 }
 
+/**
+ * Hay una carga de este equipo esperando señal. No se ofrece cargar de nuevo:
+ * el servidor todavía no sabe nada y se duplicaría el trabajo del operario.
+ */
+function pantallaEnCola(item) {
+  const que = item.action === 'abrir' ? 'la apertura de la jornada' : 'el cierre de la jornada';
+  pintar(
+    aviso('alerta', `<strong>Falta enviar ${que}.</strong> Quedó guardada en el celular porque no había señal. Se manda sola cuando vuelva; no hace falta cargarla otra vez.`) +
+    `<button class="principal" id="reintentar">Intentar enviar ahora</button>
+     <div style="height:.5rem"></div>
+     <button class="secundaria" onclick="location.reload()">Actualizar</button>`
+  );
+  document.getElementById('reintentar').onclick = async (ev) => {
+    ev.target.disabled = true;
+    ev.target.textContent = 'Enviando…';
+    const ok = await API.sincronizar(() => {});
+    if (ok) return iniciar();
+    ev.target.disabled = false;
+    ev.target.textContent = 'Intentar enviar ahora';
+    app.prepend(Object.assign(document.createElement('div'), {
+      className: 'aviso error',
+      textContent: 'Sigue sin haber señal. Probá de nuevo más tarde; no se pierde nada.'
+    }));
+  };
+}
+
+/** No hay jornada abierta, pero hoy ya hubo al menos una cerrada. */
 function pantallaListo() {
-  const t = estado.tarja;
+  const hoy = estado.jornadas_hoy || [];
+  const total = hoy.reduce((s, t) => s + Number(t.horas || 0), 0);
   pintar(`
-    ${aviso('info', `Jornada cerrada. ${t.horas} horas registradas.`)}
-    <div class="tarjeta">
-      <div class="fila"><span class="tenue">Operador</span><span>${t.operador || '—'}</span></div>
-      <div class="fila"><span class="tenue">Horómetro</span><span>${t.horom_ini} → ${t.horom_fin}</span></div>
-      <div class="fila"><span class="tenue">Horas</span><span><strong>${t.horas}</strong></span></div>
+    ${aviso('info', `${hoy.length === 1 ? 'Jornada cerrada' : hoy.length + ' jornadas cerradas'} hoy. ${total.toFixed(1)} horas en total.`)}
+    <div class="tarjeta filas">
+      ${hoy.map((t, i) => `
+        <div class="fila">
+          <span>Jornada ${i + 1} — ${t.operador || '—'}</span>
+          <span>${t.horom_ini} → ${t.horom_fin} · <strong>${t.horas} h</strong></span>
+        </div>`).join('')}
     </div>
+    <button class="principal" id="otra">Abrir otra jornada</button>
+    <div style="height:1.2rem"></div>
     <h2>Últimas jornadas</h2>
     <div class="tarjeta filas">
       ${estado.ultimas.map((u) => `
@@ -506,6 +569,7 @@ function pantallaListo() {
         </div>`).join('') || '<div class="tenue">Todavía no hay jornadas anteriores.</div>'}
     </div>
   `);
+  document.getElementById('otra').onclick = aperturaIdentidad;
 }
 
 // ---------- ciclo ----------

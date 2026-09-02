@@ -213,3 +213,31 @@ canvas.firma {
 .pie { text-align: center; padding: 0.25rem 1.25rem 1.5rem; }
 .pie a { display: block; color: var(--acento); font-weight: 600; padding: 0.5rem; }
 .pie a.secundario { color: var(--tenue); font-weight: 500; font-size: 0.88rem; }
+
+/* ---- cargas guardadas sin señal ----
+   Barra fija arriba: el operario tiene que poder ver de un vistazo que quedó
+   algo sin enviar, sin entrar a ningún lado. */
+.cola {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  background: var(--alerta-suave);
+  border-bottom: 1px solid var(--alerta);
+  color: var(--alerta);
+  padding: 0.7rem 1rem;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.cola button {
+  flex: 0 0 auto;
+  border: 1px solid var(--alerta);
+  background: transparent;
+  color: var(--alerta);
+  font-weight: 700;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+}

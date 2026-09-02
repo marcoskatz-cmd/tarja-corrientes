@@ -84,6 +84,13 @@ function sesion_(p, rolRequerido) {
   return s.rol;
 }
 
+/** Días calendario distintos: una fecha con dos jornadas sigue siendo un día. */
+function diasDistintos_(tarjas) {
+  var d = {};
+  tarjas.forEach(function (t) { d[String(t.fecha)] = true; });
+  return Object.keys(d).length;
+}
+
 // ---------- vistas ----------
 
 /** Hoy: estado de los dos equipos en una línea. */
@@ -95,16 +102,22 @@ function panelHoy_(p) {
     fecha: fecha,
     diagnostico: diagnosticar_(),
     equipos: activos_('EQUIPOS').map(function (e) {
-      var t = tarjaDelDia_(e.equipo, fecha);
+      var delDia = tarjasDelDia_(e.equipo, fecha);
+      var ids = {};
+      delDia.forEach(function (t) { ids[String(t.id)] = true; });
       var problemas = leer_('CHECKLIST_RESP').filter(function (r) {
-        return t && String(r.tarja_id) === String(t.id) && String(r.estado) === 'PROBLEMA';
+        return ids[String(r.tarja_id)] && String(r.estado) === 'PROBLEMA';
       });
+      var abierta = delDia.filter(function (t) { return String(t.estado) === 'abierta'; })[0];
       return {
         equipo: e.equipo,
         tipo: e.tipo,
-        estado: t ? String(t.estado) : 'faltante',
-        horas: t ? t.horas : '',
-        excepcion: t ? String(t.excepcion) === 'SI' : false,
+        // Con varias jornadas por día, el estado del equipo es el de la jornada
+        // en curso; si no hay ninguna abierta, importa si hubo alguna cerrada.
+        estado: abierta ? 'abierta' : (delDia.length ? 'cerrada' : 'faltante'),
+        jornadas: delDia.length,
+        horas: delDia.reduce(function (s, t) { return s + Number(t.horas || 0); }, 0),
+        excepcion: delDia.some(function (t) { return String(t.excepcion) === 'SI'; }),
         problemas_hoy: problemas.length,
         pendientes_abiertos: pend.filter(function (x) {
           return String(x.equipo) === String(e.equipo);
@@ -165,7 +178,8 @@ function panelEquipo_(p) {
     proximo_service: e.proximo_service,
     consumo_banda: [Number(e.consumo_min || 0), Number(e.consumo_max || 0)],
     horas_mes: horas,
-    dias_con_tarja: tarjas.length,
+    jornadas_mes: tarjas.length,
+    dias_con_tarja: diasDistintos_(tarjas),
     historial: tarjas.sort(function (a, b) {
       return String(a.fecha) < String(b.fecha) ? 1 : -1;
     }).map(function (t) {
@@ -200,7 +214,8 @@ function panelCertificacion_(p) {
       return {
         equipo: e.equipo,
         horas_trabajadas: tarjas.reduce(function (s, t) { return s + Number(t.horas || 0); }, 0),
-        dias_con_tarja: tarjas.length,
+        jornadas: tarjas.length,
+        dias_con_tarja: diasDistintos_(tarjas),
         dias_sin_firmar: tarjas.filter(function (t) { return String(t.estado) === 'abierta'; }).length,
         jornadas_excepcion: tarjas.filter(function (t) { return String(t.excepcion) === 'SI'; }).length
       };

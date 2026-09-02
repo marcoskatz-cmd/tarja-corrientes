@@ -34,7 +34,10 @@ function setupCompleto_() {
       creado.hojas.push(nombre);
     }
     var enc = HOJAS[nombre];
-    if (sh.getLastRow() === 0) {
+    // Si la hoja no tiene datos, se reescribe el encabezado: así una columna
+    // nueva entra sola sin migración a mano. Con datos cargados no se toca,
+    // y el desvío lo reporta diagnosticar_() en el panel.
+    if (sh.getLastRow() <= 1) {
       sh.getRange(1, 1, 1, enc.length).setValues([enc]);
       sh.setFrozenRows(1);
       sh.getRange(1, 1, 1, enc.length).setFontWeight('bold');

@@ -31,7 +31,8 @@ var HOJAS = {
     'horom_ini_sugerido', 'correccion_horom', 'motivo_correccion', 'excepcion',
     'firma', 'lat', 'lon',
     'ts_apertura', 'ts_cierre', 'ts_firma',
-    'anulada_ts', 'anulada_por', 'anulada_motivo'
+    'anulada_ts', 'anulada_por', 'anulada_motivo',
+    'op_id'
   ],
   CHECKLIST_RESP: [
     'id', 'tarja_id', 'equipo', 'fecha', 'orden', 'item', 'estado',

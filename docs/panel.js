@@ -136,7 +136,8 @@ async function verHoy() {
             <strong style="font-size:1.05rem">${e.equipo}</strong>
             ${chipEstado(e.estado)}
           </div>
-          <div class="fila"><span class="tenue">Horas del día</span><span>${e.horas !== '' ? e.horas + ' h' : '—'}</span></div>
+          <div class="fila"><span class="tenue">Jornadas de hoy</span><span>${e.jornadas}</span></div>
+          <div class="fila"><span class="tenue">Horas del día</span><span>${e.jornadas ? e.horas.toFixed(1) + ' h' : '—'}</span></div>
           <div class="fila"><span class="tenue">Problemas declarados hoy</span><span>${e.problemas_hoy}</span></div>
           <div class="fila" style="border:0"><span class="tenue">Pendientes abiertos</span>
             <span>${e.pendientes_abiertos ? `<span class="chip alerta">${e.pendientes_abiertos}</span>` : '0'}</span></div>
@@ -147,8 +148,8 @@ async function verHoy() {
 }
 
 function chipEstado(estado) {
-  if (estado === 'cerrada') return '<span class="chip ok">✓ cerrada y firmada</span>';
-  if (estado === 'abierta') return '<span class="chip alerta">abierta, sin cerrar</span>';
+  if (estado === 'cerrada') return '<span class="chip ok">✓ todo cerrado</span>';
+  if (estado === 'abierta') return '<span class="chip alerta">jornada en curso</span>';
   if (estado === 'anulada') return '<span class="chip alerta">anulada</span>';
   return '<span class="chip alerta">✕ sin tarja</span>';
 }
@@ -226,6 +227,7 @@ async function verEquipo() {
     <div class="tarjeta">
       <div class="fila"><span class="tenue">Horómetro acumulado</span><span><strong>${d.horom_actual}</strong></span></div>
       <div class="fila"><span class="tenue">Horas del mes</span><span>${d.horas_mes.toFixed(1)} h</span></div>
+      <div class="fila"><span class="tenue">Jornadas del mes</span><span>${d.jornadas_mes}</span></div>
       <div class="fila"><span class="tenue">Días con tarja</span><span>${d.dias_con_tarja}</span></div>
       <div class="fila" style="border:0"><span class="tenue">Próximo service</span><span>${d.proximo_service || '—'}</span></div>
     </div>
@@ -336,6 +338,7 @@ async function verCertificacion() {
         <div class="fila" style="border:0;padding-top:0"><strong style="font-size:1.05rem">${e.equipo}</strong></div>
         <div class="fila"><span class="tenue">Horas trabajadas</span><span><strong>${e.horas_trabajadas.toFixed(1)} h</strong></span></div>
         <div class="fila"><span class="tenue">Días con tarja</span><span>${e.dias_con_tarja}</span></div>
+        <div class="fila"><span class="tenue">Jornadas</span><span>${e.jornadas}</span></div>
         <div class="fila" style="border:0"><span class="tenue">Jornadas con horómetro corregido</span>
           <span>${e.jornadas_excepcion ? `<span class="chip alerta">${e.jornadas_excepcion}</span>` : '0'}</span></div>
         ${e.dias_sin_firmar ? aviso('alerta', `${e.dias_sin_firmar} jornada(s) quedaron abiertas y no cuentan como horas.`) : ''}

@@ -2,8 +2,11 @@
  * Ciclo de vida de la tarja: apertura, checklist, cierre y firma.
  *
  * Reglas duras que se aplican acá y en ningún otro lado:
- *  - Una sola tarja por equipo y día (LockService + chequeo, para que la cola
- *    offline no genere duplicados al reintentar).
+ *  - Se pueden abrir varias jornadas por día, pero NUNCA dos abiertas a la vez
+ *    en el mismo equipo: hay que cerrar la anterior antes de empezar otra.
+ *  - Cada envío trae su op_id. Si el celular reintenta porque se cortó la señal
+ *    después de guardar, se devuelve la tarja que ya se creó en vez de duplicarla.
+ *    Antes esto lo cubría la regla de "una por día", que ya no existe.
  *  - Delta de horómetro calculado en el servidor. Se rechazan negativos y > 14 h.
  *  - Fecha y hora del servidor, nunca del dispositivo.
  *  - Tarja cerrada = congelada. Solo se anula desde el panel.
@@ -21,11 +24,28 @@ function equipoPorNombre_(nombre) {
   return e;
 }
 
-function tarjaDelDia_(equipo, fecha) {
+/** Todas las jornadas del día, en orden de apertura. */
+function tarjasDelDia_(equipo, fecha) {
   return leer_('TARJAS').filter(function (t) {
     return String(t.equipo).toUpperCase() === String(equipo).toUpperCase() &&
            String(t.fecha) === fecha &&
            String(t.estado) !== 'anulada';
+  }).sort(function (a, b) {
+    return String(a.ts_apertura) < String(b.ts_apertura) ? -1 : 1;
+  });
+}
+
+/** La jornada abierta de hoy, si hay. Solo puede haber una. */
+function tarjaAbierta_(equipo, fecha) {
+  return tarjasDelDia_(equipo, fecha).filter(function (t) {
+    return String(t.estado) === 'abierta';
+  })[0] || null;
+}
+
+function tarjaPorOpId_(opId) {
+  if (!opId) return null;
+  return leer_('TARJAS').filter(function (t) {
+    return String(t.op_id) === String(opId);
   })[0] || null;
 }
 
@@ -35,13 +55,17 @@ function tarjaDelDia_(equipo, fecha) {
 function estadoDelDia_(p) {
   var equipo = equipoPorNombre_(p.equipo);
   var fecha = hoyStr_();
-  var t = tarjaDelDia_(equipo.equipo, fecha);
+  var delDia = tarjasDelDia_(equipo.equipo, fecha);
+  var abierta = tarjaAbierta_(equipo.equipo, fecha);
   return {
     fecha: fecha,
     equipo: equipo.equipo,
     tipo: equipo.tipo,
-    tarja: t ? tarjaPublica_(t) : null,
-    paso: !t ? 'apertura' : (String(t.estado) === 'abierta' ? 'cierre' : 'listo'),
+    tarja: abierta ? tarjaPublica_(abierta) : null,
+    jornadas_hoy: delDia.map(tarjaPublica_),
+    // Con una jornada abierta hay que cerrarla; si no, se puede abrir otra,
+    // haya o no jornadas cerradas hoy.
+    paso: abierta ? 'cierre' : (delDia.length ? 'listo' : 'apertura'),
     horom_sugerido: Number(equipo.horom_actual || 0),
     items: itemsDe_(equipo.equipo, 'diaria'),
     operadores: operadoresDe_(equipo.equipo),
@@ -104,9 +128,8 @@ function ultimasTarjas_(equipo, n) {
 // ---------- apertura ----------
 
 /**
- * Abre la jornada: foto de monitor, foto de horómetro y checklist completo,
- * todo en una sola operación atómica. Si el operador reintenta por mala señal,
- * devuelve la tarja que ya existe en vez de duplicarla.
+ * Abre una jornada: foto de monitor, foto de horómetro y checklist completo,
+ * todo en una sola operación atómica.
  */
 function abrirTarja_(p) {
   var equipo = equipoPorNombre_(p.equipo);
@@ -114,9 +137,15 @@ function abrirTarja_(p) {
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    var existente = tarjaDelDia_(equipo.equipo, fecha);
-    if (existente) {
-      return { ya_existia: true, tarja: tarjaPublica_(existente) };
+    // Reintento del mismo envío: devolver lo que ya se guardó.
+    var mismaOp = tarjaPorOpId_(p.op_id);
+    if (mismaOp) {
+      return { ya_existia: true, tarja: tarjaPublica_(mismaOp) };
+    }
+    var abierta = tarjaAbierta_(equipo.equipo, fecha);
+    if (abierta) {
+      throw new Error('Ya hay una jornada abierta en ' + equipo.equipo +
+        '. Cerrala antes de empezar otra.');
     }
 
     var operador = String(p.operador || '').trim();
@@ -156,7 +185,8 @@ function abrirTarja_(p) {
       excepcion: corregido ? 'SI' : 'NO',
       firma: urlFirma, lat: p.lat || '', lon: p.lon || '',
       ts_apertura: tsStr_(), ts_cierre: '', ts_firma: tsStr_(),
-      anulada_ts: '', anulada_por: '', anulada_motivo: ''
+      anulada_ts: '', anulada_por: '', anulada_motivo: '',
+      op_id: String(p.op_id || '')
     });
 
     respuestas.forEach(function (r) {
@@ -198,7 +228,11 @@ function abrirTarja_(p) {
         String(p.motivo_correccion).trim());
     }
 
-    return { ya_existia: false, tarja: tarjaPublica_(buscarPorId_('TARJAS', id)) };
+    return {
+      ya_existia: false,
+      tarja: tarjaPublica_(buscarPorId_('TARJAS', id)),
+      jornada: tarjasDelDia_(equipo.equipo, fecha).length
+    };
   } finally {
     lock.releaseLock();
   }
