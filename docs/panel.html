@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<title>Panel — Tarja Corrientes</title>
+<link rel="stylesheet" href="estilo.css">
+<style>
+  nav.pestanas { display: flex; gap: .35rem; padding: .6rem 1rem 0; overflow-x: auto; background: var(--acento); }
+  nav.pestanas button {
+    flex: 0 0 auto; border: 0; background: rgba(255,255,255,.15); color: #fff;
+    padding: .55rem .9rem; border-radius: .6rem .6rem 0 0; font-size: .92rem; font-weight: 600;
+  }
+  nav.pestanas button.activa { background: var(--fondo); color: var(--acento); }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--borde); }
+  th { color: var(--tenue); font-weight: 600; font-size: .82rem; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll-x { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="equipo">Panel de control</div>
+    <div class="fecha" id="hRol"></div>
+  </div>
+  <button id="btnSalir" hidden>Salir</button>
+</header>
+<nav class="pestanas" id="nav" hidden></nav>
+<main id="app"><div class="cargando">Cargando…</div></main>
+
+<script>window.TARJA_API_URL = 'https://script.google.com/macros/s/AKfycbxwItT5p7VrxMVr-v0PCOJ0vb5Qm5p6GmZmdTPJAh3-43FiQkp84OQnT3nf6lJY8zIe2w/exec';</script>
+<script src="api.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>

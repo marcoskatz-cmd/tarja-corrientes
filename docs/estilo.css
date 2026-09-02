@@ -1,0 +1,172 @@
+/*
+ * Paleta pensada para daltonismo rojo-verde: nada de verde puro.
+ * OK va en teal, Problema en ámbar, y además cada estado lleva su ícono,
+ * así el color nunca es la única señal.
+ * Tema claro fijo: la app se usa a pleno sol arriba de una máquina.
+ */
+
+:root {
+  --fondo: #f2f5f7;
+  --tarjeta: #ffffff;
+  --texto: #14212c;
+  --tenue: #5b6b78;
+  --borde: #d3dbe2;
+  --acento: #0f766e;
+  --acento-suave: #d7efec;
+  --alerta: #b45309;
+  --alerta-suave: #fdf0dc;
+  --grave: #9f1239;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-bottom: 5rem;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--acento);
+  color: #fff;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+header .equipo { font-weight: 700; font-size: 1.15rem; letter-spacing: 0.02em; }
+header .fecha { font-size: 0.85rem; opacity: 0.9; }
+header button {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+main { padding: 1rem; max-width: 640px; margin: 0 auto; }
+
+h2 { font-size: 1.1rem; margin: 0 0 0.25rem; }
+.ayuda { color: var(--tenue); font-size: 0.92rem; margin: 0 0 1rem; }
+
+.tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 0.9rem;
+  padding: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+button.principal {
+  width: 100%;
+  padding: 1.05rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--acento);
+  color: #fff;
+}
+button.principal[disabled] { background: #b6c2cb; }
+
+button.secundaria {
+  width: 100%;
+  padding: 0.8rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.7rem;
+  background: var(--tarjeta);
+  color: var(--texto);
+}
+
+.grande { display: grid; gap: 0.75rem; }
+.grande button {
+  padding: 1.6rem 1rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: 2px solid var(--acento);
+  border-radius: 1rem;
+  background: var(--tarjeta);
+  color: var(--acento);
+}
+
+/* ---- cámara ---- */
+.camara { position: relative; background: #000; border-radius: 0.9rem; overflow: hidden; }
+.camara video { width: 100%; display: block; }
+.camara .indicacion {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6); color: #fff;
+  padding: 0.6rem 0.8rem; font-size: 0.9rem;
+}
+img.previa { width: 100%; border-radius: 0.9rem; display: block; }
+
+/* ---- checklist ---- */
+.item { border-bottom: 1px solid var(--borde); padding: 0.9rem 0; }
+.item:last-child { border-bottom: 0; }
+.item .texto { font-weight: 600; margin-bottom: 0.6rem; }
+.opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.opciones button {
+  padding: 0.9rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid var(--borde);
+  border-radius: 0.7rem;
+  background: var(--tarjeta);
+  color: var(--tenue);
+}
+.opciones button.ok.elegido {
+  border-color: var(--acento); background: var(--acento-suave); color: var(--acento);
+}
+.opciones button.problema.elegido {
+  border-color: var(--alerta); background: var(--alerta-suave); color: var(--alerta);
+}
+
+input[type="number"], input[type="text"], textarea, select {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1.05rem;
+  border: 1px solid var(--borde);
+  border-radius: 0.6rem;
+  background: var(--tarjeta);
+  color: var(--texto);
+}
+input[readonly] { background: #eef2f5; color: var(--tenue); }
+label { display: block; font-weight: 600; font-size: 0.9rem; margin: 0.9rem 0 0.35rem; }
+
+canvas.firma {
+  width: 100%; height: 180px;
+  border: 2px dashed var(--borde);
+  border-radius: 0.7rem;
+  background: var(--tarjeta);
+  touch-action: none;
+}
+
+.aviso {
+  padding: 0.8rem 1rem; border-radius: 0.7rem; margin-bottom: 0.9rem;
+  font-size: 0.95rem; border: 1px solid;
+}
+.aviso.error { background: #fdeaee; border-color: var(--grave); color: var(--grave); }
+.aviso.info { background: var(--acento-suave); border-color: var(--acento); color: var(--acento); }
+.aviso.alerta { background: var(--alerta-suave); border-color: var(--alerta); color: var(--alerta); }
+
+.filas { display: grid; gap: 0.5rem; }
+.fila {
+  display: flex; justify-content: space-between; gap: 0.75rem;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--borde); font-size: 0.95rem;
+}
+.tenue { color: var(--tenue); }
+.chip {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 700;
+}
+.chip.ok { background: var(--acento-suave); color: var(--acento); }
+.chip.alerta { background: var(--alerta-suave); color: var(--alerta); }
+
+.cargando { text-align: center; color: var(--tenue); padding: 2.5rem 1rem; }
