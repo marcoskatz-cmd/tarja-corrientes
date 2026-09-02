@@ -186,7 +186,10 @@ canvas.firma {
   padding: 1rem;
 }
 .ute img { height: 34px; width: auto; display: block; }
-.ute .separador { width: 1px; height: 26px; background: var(--borde); }
+/* Oculto por defecto: si el logo anterior no cargó y se quitó del DOM, el
+   separador deja de tener un img delante y no queda una raya suelta. */
+.ute .separador { display: none; width: 1px; height: 26px; background: var(--borde); }
+.ute img + .separador { display: block; }
 .ute .leyenda {
   width: 100%;
   text-align: center;
