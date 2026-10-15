@@ -188,6 +188,7 @@ function abrirTarja_(p) {
       anulada_ts: '', anulada_por: '', anulada_motivo: '',
       op_id: String(p.op_id || '')
     });
+    try { notificarAppIngeco_('TARJA', { destinatarios: [{ con_modulo: 'TARJA' }], tipo: 'aviso_general', prioridad: 'normal', titulo: 'Tarja abierta: ' + equipo.equipo, cuerpo: operador + ' · horómetro ' + horomIni + ' · ' + fecha, url_destino: 'https://marcoskatz-cmd.github.io/tarja-corrientes/', clave_unica: 'tarja-abierta-' + id }); } catch (eAv) { }
 
     respuestas.forEach(function (r) {
       var item = items.filter(function (i) { return i.orden === Number(r.orden); })[0];
@@ -217,6 +218,7 @@ function abrirTarja_(p) {
           comentario: String(r.comentario || '').trim(), foto: urlFoto,
           estado: 'abierto', fecha_cierre: '', motivo_cierre: '', cerrado_por: ''
         });
+        try { notificarAppIngeco_('TARJA', { destinatarios: [{ con_modulo: 'TARJA' }, { area: 'TALLER' }, { admin: true }], tipo: 'aviso_general', prioridad: 'critica', titulo: 'Problema en ' + equipo.equipo + ': ' + item.item, cuerpo: (String(r.comentario || '').trim() || 'Sin comentario') + ' · ' + operador + ' · ' + fecha, url_destino: urlFoto || 'https://marcoskatz-cmd.github.io/tarja-corrientes/', clave_unica: 'pendiente-' + respId }); } catch (eAv) { }
       }
     });
 
@@ -278,6 +280,7 @@ function cerrarTarja_(p) {
       foto_horom_fin: urlHorom,
       ts_cierre: tsStr_()
     });
+    try { notificarAppIngeco_('TARJA', { destinatarios: [{ con_modulo: 'TARJA' }], tipo: 'aviso_general', prioridad: 'normal', titulo: 'Tarja cerrada: ' + t.equipo + ' · ' + Number(horas).toFixed(1) + ' h', cuerpo: 'Horómetro ' + t.horom_ini + ' → ' + horomFin + ' · ' + fecha, url_destino: 'https://marcoskatz-cmd.github.io/tarja-corrientes/', clave_unica: 'tarja-cerrada-' + t.id }); } catch (eAv) { }
 
     var eq = equipoPorNombre_(t.equipo);
     actualizar_('EQUIPOS', eq._fila, { horom_actual: horomFin });
