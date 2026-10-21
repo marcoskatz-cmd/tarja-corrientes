@@ -5,11 +5,11 @@
  * lo que no se puede enviar queda en la cola de IndexedDB, no acá.
  */
 
-const CACHE = 'tarja-v11';
+const CACHE = 'tarja-v12';
 // Los assets van con ?v=N igual que en el HTML: si no coinciden, el caché
 // nunca da en el clavo y además el navegador se queda con la versión vieja.
 // Al publicar un cambio hay que subir el número acá y en los tres HTML.
-const V = '11';
+const V = '12';
 const COMUN = 'https://marcoskatz-cmd.github.io/app-ingeco/ingeco.';
 const ARMAZON = [
   './',

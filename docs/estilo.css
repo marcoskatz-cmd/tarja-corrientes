@@ -199,9 +199,6 @@ canvas.firma {
    separador deja de tener un img delante y no queda una raya suelta. */
 .ute .separador { display: none; width: 1px; height: 26px; background: var(--linea-fuerte); }
 .ute img + .separador { display: block; }
-/* Dentro de la App el logo de INGECO se oculta (la App ya lo muestra): sin él,
-   el separador queda colgando al final, así que también se oculta. */
-html[data-ig-contexto="iframe"] .ute .separador { display: none; }
 .ute .leyenda {
   width: 100%;
   text-align: center;
