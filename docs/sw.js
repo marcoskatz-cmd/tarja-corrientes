@@ -5,11 +5,12 @@
  * lo que no se puede enviar queda en la cola de IndexedDB, no acá.
  */
 
-const CACHE = 'tarja-v10';
+const CACHE = 'tarja-v11';
 // Los assets van con ?v=N igual que en el HTML: si no coinciden, el caché
 // nunca da en el clavo y además el navegador se queda con la versión vieja.
 // Al publicar un cambio hay que subir el número acá y en los tres HTML.
-const V = '10';
+const V = '11';
+const COMUN = 'https://marcoskatz-cmd.github.io/app-ingeco/ingeco.';
 const ARMAZON = [
   './',
   './index.html',
@@ -41,6 +42,17 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.hostname.indexOf('script.google.com') !== -1) return;
+
+  // Estilo común de la App INGECO (ingeco.css / ingeco.js): red primero, caché solo sin señal.
+  // Sin respaldo a index.html: si no hay copia, que falle y quede el respaldo mínimo del <head>.
+  if (e.request.url.startsWith(COMUN)) {
+    e.respondWith(
+      fetch(e.request)
+        .then((r) => { if (r && r.ok) { const copia = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, copia)); } return r; })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
 
   // Red primero para tener siempre la última versión; caché como red de seguridad.
   e.respondWith(

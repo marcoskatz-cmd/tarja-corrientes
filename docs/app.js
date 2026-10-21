@@ -229,7 +229,7 @@ function aperturaIdentidad() {
   ctx.scale(dpr, dpr);
   ctx.lineWidth = 2.5;
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#14212c';
+  ctx.strokeStyle = (window.IG && IG.color('tinta')) || '#0f1a3d';
 
   let dibujando = false;
   const punto = (e) => {

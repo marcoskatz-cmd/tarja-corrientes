@@ -3,13 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#f5f4f0">
 <title>Cómo se usa — Tarja Corrientes</title>
-<link rel="stylesheet" href="estilo.css?v=10">
+<style>:root{--azul:#1e3a8a;--azul-claro:#2b4fb3;--azul-suave:#e6ecfb;--tinta:#0f1a3d;--teal:#0e8a7a;--teal-suave:#dcf1ee;--ambar:#d98f00;--ambar-suave:#fff1cf;--ambar-texto:#8a5a00;--alerta:#b8410e;--alerta-suave:#fbe6dc;--fondo:#f5f4f0;--fondo-2:#ebe9e3;--superficie:#fff;--texto:#171c2e;--texto-2:#5b6274;--texto-3:#8a90a0;--linea:#e2dfd7;--linea-fuerte:#c9c5bb;--radio:14px;--radio-s:10px;--barra-h:56px;--cuerpo:system-ui,sans-serif;--display:system-ui,sans-serif}[data-ig-volver]{display:none}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://marcoskatz-cmd.github.io/app-ingeco/ingeco.css">
+<script src="https://marcoskatz-cmd.github.io/app-ingeco/ingeco.js" defer></script>
+<link rel="stylesheet" href="estilo.css?v=11">
 </head>
 <body>
 <header>
-  <div><div class="equipo">Cómo se usa</div></div>
+  <div class="izq"><button class="ig-volver" data-ig-volver aria-label="Volver a la App INGECO"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><div class="equipo">Cómo se usa</div></div>
   <button onclick="history.back()">Volver</button>
 </header>
 <main>
@@ -54,7 +58,7 @@
 <div class="ute">
   <img src="logos/casella.jpeg" alt="Casella S.A. Constructora" onerror="this.remove()">
   <div class="separador"></div>
-  <img class="ingeco" src="logos/ingeco.png" alt="INGECO Construcciones" onerror="this.remove()">
+  <img class="ingeco" src="logos/ingeco.png" alt="INGECO Construcciones" onerror="this.remove()" data-ig-ocultar-en-app>
   <div class="leyenda">UTE &mdash; Obra Corrientes</div>
 </div>
 

@@ -1,22 +1,11 @@
 /*
- * Paleta pensada para daltonismo rojo-verde: nada de verde puro.
- * OK va en teal, Problema en ámbar, y además cada estado lleva su ícono,
- * así el color nunca es la única señal.
- * Tema claro fijo: la app se usa a pleno sol arriba de una máquina.
+ * Piel común de la App INGECO (tokens en ingeco.css, respaldo mínimo en el <head>).
+ * Paleta pensada para daltonismo rojo-verde: nada de verde ni rojo puro.
+ * Bien va en teal, Falla en ámbar, error grave en naranja oscuro (--alerta), y
+ * además cada estado lleva su ícono o texto, así el color nunca es la única señal.
+ * Tema claro fijo: la app se usa a pleno sol arriba de una máquina y con guantes,
+ * por eso los bordes van en --linea-fuerte y los botones son grandes.
  */
-
-:root {
-  --fondo: #f2f5f7;
-  --tarjeta: #ffffff;
-  --texto: #14212c;
-  --tenue: #5b6b78;
-  --borde: #d3dbe2;
-  --acento: #0f766e;
-  --acento-suave: #d7efec;
-  --alerta: #b45309;
-  --alerta-suave: #fdf0dc;
-  --grave: #9f1239;
-}
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -24,7 +13,7 @@ body {
   margin: 0;
   background: var(--fondo);
   color: var(--texto);
-  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 16px/1.45 var(--cuerpo);
   padding-bottom: 5rem;
 }
 
@@ -32,100 +21,114 @@ header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--acento);
-  color: #fff;
-  padding: 0.85rem 1rem;
+  min-height: var(--barra-h, 56px);
+  background: color-mix(in srgb, var(--fondo) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--linea);
+  color: var(--tinta);
+  padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
 }
-header .equipo { font-weight: 700; font-size: 1.15rem; letter-spacing: 0.02em; }
-header .fecha { font-size: 0.85rem; opacity: 0.9; }
-header button {
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  color: #fff;
-  border-radius: 0.5rem;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.85rem;
+header .izq { display: flex; align-items: center; gap: 0.25rem; min-width: 0; }
+header .ig-volver { margin-left: -0.6rem; }
+header .equipo { font-family: var(--display); font-weight: 700; font-size: 1.2rem; letter-spacing: 0.02em; color: var(--tinta); }
+header .fecha { font-size: 0.88rem; color: var(--texto-2); }
+header button:not(.ig-volver) {
+  background: var(--superficie);
+  border: 1px solid var(--linea-fuerte);
+  color: var(--azul);
+  border-radius: var(--radio-s);
+  min-height: 44px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 main { padding: 1rem; max-width: 640px; margin: 0 auto; }
 
-h2 { font-size: 1.1rem; margin: 0 0 0.25rem; }
-.ayuda { color: var(--tenue); font-size: 0.92rem; margin: 0 0 1rem; }
+h2 { font-family: var(--display); font-size: 1.2rem; font-weight: 600; color: var(--tinta); margin: 0 0 0.25rem; }
+.ayuda { color: var(--texto-2); font-size: 0.95rem; margin: 0 0 1rem; }
 
 .tarjeta {
-  background: var(--tarjeta);
-  border: 1px solid var(--borde);
-  border-radius: 0.9rem;
+  background: var(--superficie);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: var(--radio);
   padding: 1rem;
   margin-bottom: 0.9rem;
 }
 
 button.principal {
   width: 100%;
+  min-height: 46px;
   padding: 1.05rem;
   font-size: 1.05rem;
   font-weight: 700;
   border: 0;
-  border-radius: 0.75rem;
-  background: var(--acento);
+  border-radius: var(--radio-s);
+  background: var(--azul);
   color: #fff;
 }
-button.principal[disabled] { background: #b6c2cb; }
+button.principal[disabled] { background: var(--fondo-2); color: var(--texto-2); box-shadow: inset 0 0 0 1px var(--linea-fuerte); }
 
 button.secundaria {
   width: 100%;
+  min-height: 46px;
   padding: 0.8rem;
   font-size: 0.95rem;
-  border: 1px solid var(--borde);
-  border-radius: 0.7rem;
-  background: var(--tarjeta);
-  color: var(--texto);
+  font-weight: 600;
+  border: 1px solid var(--linea-fuerte);
+  border-radius: var(--radio-s);
+  background: var(--superficie);
+  color: var(--azul);
 }
 
 .grande { display: grid; gap: 0.75rem; }
 .grande button {
   padding: 1.6rem 1rem;
+  font-family: var(--display);
   font-size: 1.3rem;
   font-weight: 700;
-  border: 2px solid var(--acento);
-  border-radius: 1rem;
-  background: var(--tarjeta);
-  color: var(--acento);
+  border: 2px solid var(--azul);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--azul);
 }
 
 /* ---- cámara ---- */
-.camara { position: relative; background: #000; border-radius: 0.9rem; overflow: hidden; }
+.camara { position: relative; background: #000; border-radius: var(--radio); overflow: hidden; }
 .camara video { width: 100%; display: block; }
 .camara .indicacion {
   position: absolute; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.6); color: #fff;
   padding: 0.6rem 0.8rem; font-size: 0.9rem;
 }
-img.previa { width: 100%; border-radius: 0.9rem; display: block; }
+img.previa { width: 100%; border-radius: var(--radio); display: block; }
 
 /* ---- checklist ---- */
-.item { border-bottom: 1px solid var(--borde); padding: 0.9rem 0; }
+.item { border-bottom: 1px solid var(--linea); padding: 0.9rem 0; }
 .item:last-child { border-bottom: 0; }
 .item .texto { font-weight: 600; margin-bottom: 0.6rem; }
 .opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 .opciones button {
   padding: 0.9rem 0.5rem;
+  min-height: 46px;
   font-size: 1rem;
   font-weight: 700;
-  border: 2px solid var(--borde);
-  border-radius: 0.7rem;
-  background: var(--tarjeta);
-  color: var(--tenue);
+  border: 2px solid var(--linea-fuerte);
+  border-radius: var(--radio-s);
+  background: var(--superficie);
+  color: var(--texto-2);
 }
 .opciones button.ok.elegido {
-  border-color: var(--acento); background: var(--acento-suave); color: var(--acento);
+  border-color: var(--teal); background: var(--teal-suave); color: var(--teal);
 }
 .opciones button.problema.elegido {
-  border-color: var(--alerta); background: var(--alerta-suave); color: var(--alerta);
+  border-color: var(--ambar); background: var(--ambar-suave); color: var(--ambar-texto);
 }
 
 /* Todos los inputs, no una lista de tipos: el ancho intrínseco de un input que
@@ -134,44 +137,46 @@ input, textarea, select {
   width: 100%;
   padding: 0.85rem;
   font-size: 1.05rem;
-  border: 1px solid var(--borde);
-  border-radius: 0.6rem;
-  background: var(--tarjeta);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: var(--radio-s);
+  background: var(--superficie);
   color: var(--texto);
 }
-input[readonly] { background: #eef2f5; color: var(--tenue); }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--azul-claro); outline-offset: 1px; border-color: var(--azul-claro); }
+input[readonly] { background: var(--fondo-2); color: var(--texto-2); }
 label { display: block; font-weight: 600; font-size: 0.9rem; margin: 0.9rem 0 0.35rem; }
 
 canvas.firma {
   width: 100%; height: 180px;
-  border: 2px dashed var(--borde);
-  border-radius: 0.7rem;
-  background: var(--tarjeta);
+  border: 2px dashed var(--linea-fuerte);
+  border-radius: var(--radio-s);
+  background: var(--superficie);
   touch-action: none;
 }
 
 .aviso {
-  padding: 0.8rem 1rem; border-radius: 0.7rem; margin-bottom: 0.9rem;
+  padding: 0.8rem 1rem; border-radius: var(--radio-s); margin-bottom: 0.9rem;
   font-size: 0.95rem; border: 1px solid;
 }
-.aviso.error { background: #fdeaee; border-color: var(--grave); color: var(--grave); }
-.aviso.info { background: var(--acento-suave); border-color: var(--acento); color: var(--acento); }
-.aviso.alerta { background: var(--alerta-suave); border-color: var(--alerta); color: var(--alerta); }
+.aviso.error { background: var(--alerta-suave); border-color: var(--alerta); color: var(--alerta); }
+.aviso.info { background: var(--azul-suave); border-color: var(--azul); color: var(--azul); }
+.aviso.alerta { background: var(--ambar-suave); border-color: var(--ambar); color: var(--ambar-texto); }
 
 .filas { display: grid; gap: 0.5rem; }
 .fila {
   display: flex; justify-content: space-between; gap: 0.75rem;
-  padding: 0.6rem 0; border-bottom: 1px solid var(--borde); font-size: 0.95rem;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--linea); font-size: 0.95rem;
 }
-.tenue { color: var(--tenue); }
+.tenue { color: var(--texto-2); }
 .chip {
   display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
   font-size: 0.78rem; font-weight: 700;
 }
-.chip.ok { background: var(--acento-suave); color: var(--acento); }
-.chip.alerta { background: var(--alerta-suave); color: var(--alerta); }
+.chip.ok { background: var(--teal-suave); color: var(--teal); }
+.chip.alerta { background: var(--ambar-suave); color: var(--ambar-texto); }
 
-.cargando { text-align: center; color: var(--tenue); padding: 2.5rem 1rem; }
+.cargando { text-align: center; color: var(--texto-2); padding: 2.5rem 1rem; }
+
 
 /* ---- banda de la UTE ----
    Las dos constructoras que forman la UTE de la obra. Aparece al pie del
@@ -192,27 +197,32 @@ canvas.firma {
 .ute img.ingeco { height: 50px; }
 /* Oculto por defecto: si el logo anterior no cargó y se quitó del DOM, el
    separador deja de tener un img delante y no queda una raya suelta. */
-.ute .separador { display: none; width: 1px; height: 26px; background: var(--borde); }
+.ute .separador { display: none; width: 1px; height: 26px; background: var(--linea-fuerte); }
 .ute img + .separador { display: block; }
+/* Dentro de la App el logo de INGECO se oculta (la App ya lo muestra): sin él,
+   el separador queda colgando al final, así que también se oculta. */
+html[data-ig-contexto="iframe"] .ute .separador { display: none; }
 .ute .leyenda {
   width: 100%;
   text-align: center;
+  font-family: var(--display);
+  font-weight: 600;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--tenue);
+  color: var(--texto-2);
 }
 /* Fondo blanco para la banda: el logo de Casella viene en JPEG con fondo blanco
    y sobre el gris de la app quedaba como un recuadro pegoteado. */
-.ute { background: #ffffff; border-top: 1px solid var(--borde); }
+.ute { background: var(--superficie); border-top: 1px solid var(--linea); }
 
 /* ---- pie del operador ----
    "Cómo se usa" primero, que es lo único que el operario puede llegar a
    necesitar. El panel va abajo y en gris: existe para que la oficina lo
    encuentre desde el celular, no para invitar a nadie a entrar. */
 .pie { text-align: center; padding: 0.25rem 1.25rem 1.5rem; }
-.pie a { display: block; color: var(--acento); font-weight: 600; padding: 0.5rem; }
-.pie a.secundario { color: var(--tenue); font-weight: 500; font-size: 0.88rem; }
+.pie a { display: block; color: var(--azul); font-weight: 600; padding: 0.5rem; }
+.pie a.secundario { color: var(--texto-2); font-weight: 500; font-size: 0.88rem; }
 
 /* ---- cargas guardadas sin señal ----
    Barra fija arriba: el operario tiene que poder ver de un vistazo que quedó
@@ -221,9 +231,9 @@ canvas.firma {
   position: sticky;
   top: 0;
   z-index: 9;
-  background: var(--alerta-suave);
-  border-bottom: 1px solid var(--alerta);
-  color: var(--alerta);
+  background: var(--ambar-suave);
+  border-bottom: 1px solid var(--ambar);
+  color: var(--ambar-texto);
   padding: 0.7rem 1rem;
   font-size: 0.92rem;
   display: flex;
@@ -236,11 +246,12 @@ canvas.firma {
 .cola[hidden] { display: none; }
 .cola button {
   flex: 0 0 auto;
-  border: 1px solid var(--alerta);
-  background: transparent;
-  color: var(--alerta);
+  border: 1px solid var(--ambar);
+  background: var(--superficie);
+  color: var(--ambar-texto);
   font-weight: 700;
-  border-radius: 0.5rem;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.85rem;
+  border-radius: var(--radio-s);
+  min-height: 44px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
 }

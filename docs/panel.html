@@ -3,28 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#f5f4f0">
 <title>Panel — Tarja Corrientes</title>
-<link rel="stylesheet" href="estilo.css?v=10">
+<style>:root{--azul:#1e3a8a;--azul-claro:#2b4fb3;--azul-suave:#e6ecfb;--tinta:#0f1a3d;--teal:#0e8a7a;--teal-suave:#dcf1ee;--ambar:#d98f00;--ambar-suave:#fff1cf;--ambar-texto:#8a5a00;--alerta:#b8410e;--alerta-suave:#fbe6dc;--fondo:#f5f4f0;--fondo-2:#ebe9e3;--superficie:#fff;--texto:#171c2e;--texto-2:#5b6274;--texto-3:#8a90a0;--linea:#e2dfd7;--linea-fuerte:#c9c5bb;--radio:14px;--radio-s:10px;--barra-h:56px;--cuerpo:system-ui,sans-serif;--display:system-ui,sans-serif}[data-ig-volver]{display:none}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://marcoskatz-cmd.github.io/app-ingeco/ingeco.css">
+<script src="https://marcoskatz-cmd.github.io/app-ingeco/ingeco.js" defer></script>
+<link rel="stylesheet" href="estilo.css?v=11">
 <style>
-  nav.pestanas { display: flex; gap: .35rem; padding: .6rem 1rem 0; overflow-x: auto; background: var(--acento); }
+  /* Pestañas en pastilla, como la bandeja de la App INGECO */
+  nav.pestanas { display: flex; gap: 6px; padding: .75rem 1rem 0; overflow-x: auto; max-width: 640px; margin: 0 auto; scrollbar-width: none; }
+  nav.pestanas::-webkit-scrollbar { display: none; }
+  nav.pestanas[hidden] { display: none; }
   nav.pestanas button {
-    flex: 0 0 auto; border: 0; background: rgba(255,255,255,.15); color: #fff;
-    padding: .55rem .9rem; border-radius: .6rem .6rem 0 0; font-size: .92rem; font-weight: 600;
+    flex: 0 0 auto; white-space: nowrap; border: 1px solid var(--linea-fuerte); background: var(--superficie); color: var(--texto-2);
+    min-height: 44px; padding: 0 16px; border-radius: 999px; font-size: .95rem; font-weight: 600;
   }
-  nav.pestanas button.activa { background: var(--fondo); color: var(--acento); }
-  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-  th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--borde); }
-  th { color: var(--tenue); font-weight: 600; font-size: .82rem; }
+  nav.pestanas button.activa { background: var(--tinta); color: var(--fondo); border-color: var(--tinta); }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--linea); }
+  th { color: var(--texto-2); font-family: var(--display); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .scroll-x { overflow-x: auto; }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <div class="equipo">Panel de control</div>
-    <div class="fecha" id="hRol"></div>
+  <div class="izq">
+    <button class="ig-volver" data-ig-volver aria-label="Volver a la App INGECO"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div>
+      <div class="equipo">Panel de control</div>
+      <div class="fecha" id="hRol"></div>
+    </div>
   </div>
   <button id="btnSalir" hidden>Salir</button>
 </header>
@@ -34,13 +44,13 @@
 <div class="ute">
   <img src="logos/casella.jpeg" alt="Casella S.A. Constructora" onerror="this.remove()">
   <div class="separador"></div>
-  <img class="ingeco" src="logos/ingeco.png" alt="INGECO Construcciones" onerror="this.remove()">
+  <img class="ingeco" src="logos/ingeco.png" alt="INGECO Construcciones" onerror="this.remove()" data-ig-ocultar-en-app>
   <div class="leyenda">UTE &mdash; Obra Corrientes</div>
 </div>
 
 
 <script>window.TARJA_API_URL = 'https://script.google.com/macros/s/AKfycbxwItT5p7VrxMVr-v0PCOJ0vb5Qm5p6GmZmdTPJAh3-43FiQkp84OQnT3nf6lJY8zIe2w/exec';</script>
-<script src="api.js?v=10"></script>
-<script src="panel.js?v=10"></script>
+<script src="api.js?v=11"></script>
+<script src="panel.js?v=11"></script>
 </body>
 </html>
