@@ -10,7 +10,7 @@ const CACHE = 'tarja-v12';
 // nunca da en el clavo y además el navegador se queda con la versión vieja.
 // Al publicar un cambio hay que subir el número acá y en los tres HTML.
 const V = '12';
-const COMUN = 'https://marcoskatz-cmd.github.io/app-ingeco/ingeco.';
+const COMUN = 'https://app.ingecosa.com.ar/ingeco.';
 const ARMAZON = [
   './',
   './index.html',
