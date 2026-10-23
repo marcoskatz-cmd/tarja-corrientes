@@ -136,6 +136,7 @@ function abrirTarja_(p) {
   var fecha = hoyStr_();
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
+  limpiarMemo_();
   try {
     // Reintento del mismo envío: devolver lo que ya se guardó.
     var mismaOp = tarjaPorOpId_(p.op_id);
@@ -249,6 +250,7 @@ function abrirTarja_(p) {
 function cerrarTarja_(p) {
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
+  limpiarMemo_();
   try {
     var t = buscarPorId_('TARJAS', p.tarja_id);
     if (!t) throw new Error('No se encontró la tarja.');

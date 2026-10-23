@@ -95,6 +95,14 @@ var RUTAS = {
   corregir_horometro: corregirHorometro_
 };
 
+// Vistas del panel que se pueden pedir de yapa con con_all.
+var LECTURAS_CON_ALL_ = {
+  hoy: panelHoy_,
+  pendientes: panelPendientes_,
+  equipo: panelEquipo_,
+  certificacion: panelCertificacion_
+};
+
 function doPost(e) {
   var p;
   try {
@@ -105,7 +113,18 @@ function doPost(e) {
   var fn = RUTAS[p.action];
   if (!fn) return json_({ ok: false, error: 'Acción desconocida: ' + p.action });
   try {
-    return json_({ ok: true, data: fn(p) });
+    var data = fn(p);
+    // con_all (opcional): después de escribir, el panel pide la vista que va a
+    // mostrar en la misma respuesta y se ahorra un segundo viaje (~3 s). Sin el
+    // flag la respuesta es la de siempre.
+    if (p.con_all && LECTURAS_CON_ALL_[p.con_all]) {
+      var q = {};
+      Object.keys(p).forEach(function (k) { q[k] = p[k]; });
+      var extra = p.con_all_datos || {};
+      Object.keys(extra).forEach(function (k) { q[k] = extra[k]; });
+      return json_({ ok: true, data: data, all: LECTURAS_CON_ALL_[p.con_all](q) });
+    }
+    return json_({ ok: true, data: data });
   } catch (err) {
     // Mensaje en castellano llano: el operador tiene que entender qué hacer.
     return json_({ ok: false, error: String(err.message || err) });

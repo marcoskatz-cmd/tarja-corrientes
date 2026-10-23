@@ -72,6 +72,7 @@ function borrarFilas_(nombre, filas) {
   filas.map(function (f) { return f._fila; })
     .sort(function (a, b) { return b - a; })
     .forEach(function (n) { sh.deleteRow(n); });
+  limpiarMemo_();
 }
 
 /**

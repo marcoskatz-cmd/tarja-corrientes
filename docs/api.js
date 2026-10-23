@@ -17,7 +17,8 @@ const API_URL = window.TARJA_API_URL;
 
 const SIN_SEÑAL = 'No se pudo conectar con el servidor.';
 
-async function llamar(action, datos = {}) {
+/** Igual que llamar pero devuelve la respuesta entera ({data, all}). */
+async function llamarCompleto(action, datos = {}) {
   let r;
   try {
     r = await fetch(API_URL, {
@@ -41,7 +42,11 @@ async function llamar(action, datos = {}) {
     throw new Error(SIN_SEÑAL);
   }
   if (!j.ok) throw new Error(j.error || 'Ocurrió un error inesperado.');
-  return j.data;
+  return j;
+}
+
+async function llamar(action, datos = {}) {
+  return (await llamarCompleto(action, datos)).data;
 }
 
 // ---------- IndexedDB ----------
@@ -151,4 +156,4 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) sincronizar(() => {});
 });
 
-window.API = { llamar, enviar, sincronizar, pendientesEnCola, alCambiarCola, avisar };
+window.API = { llamar, llamarCompleto, enviar, sincronizar, pendientesEnCola, alCambiarCola, avisar };

@@ -51,6 +51,77 @@ async function pedir(action, datos = {}) {
   return API.llamar(action, { ...datos, token: sesion.token });
 }
 
+// ---------- caché de vistas (primer pintado instantáneo) ----------
+//
+// Cada llamada a Apps Script tarda ~3 s. La última respuesta de cada vista se
+// guarda en el celular: al abrir la pestaña se pinta eso al toque y se refresca
+// en segundo plano. Solo lecturas; nada de lo que se escribe pasa por acá.
+
+const recien = {};
+let vistaN = 0;  // sube en cada abrir(): una respuesta vieja no pisa otra pestaña
+
+function claveCache(action, datos) {
+  return 'cache:' + (sesion && sesion.rol) + ':' + action + ':' + JSON.stringify(datos);
+}
+function deCache(clave) {
+  try { return JSON.parse(localStorage.getItem(clave) || 'null'); } catch (e) { return null; }
+}
+function aCache(clave, d) {
+  try { localStorage.setItem(clave, JSON.stringify(d)); } catch (e) { /* lleno: no pasa nada */ }
+}
+/** Hay un formulario abierto (cerrar, anular, corregir): no repintar encima. */
+function editando() { return !!app.querySelector('#ok'); }
+
+/**
+ * Pinta con lo guardado (si hay) y después con lo fresco del servidor. Si lo
+ * fresco es igual, no repinta. Si falla la red y ya había algo pintado, queda
+ * eso con un aviso chico en vez de la pantalla de error.
+ */
+async function leer(action, datos, pintarCon) {
+  const n = vistaN;
+  const clave = claveCache(action, datos);
+  const viejo = deCache(clave);
+  if (viejo) pintarCon(viejo);
+  // Recién traído por escribirYVer: no hace falta pedirlo otra vez.
+  if (viejo && recien[clave] > Date.now()) { delete recien[clave]; return; }
+  let fresco;
+  try {
+    fresco = await pedir(action, datos);
+  } catch (e) {
+    if (!viejo || /sesi[oó]n|PIN/i.test(e.message)) throw e;
+    if (n === vistaN) aviso_toast('Sin conexión: se muestra lo último que se cargó.');
+    return;
+  }
+  aCache(clave, fresco);
+  if (n !== vistaN) return;
+  if (viejo && JSON.stringify(viejo) === JSON.stringify(fresco)) return;
+  if (viejo && editando()) return;
+  pintarCon(fresco);
+}
+
+/**
+ * Escribe y vuelve a la vista en un solo viaje: el backend devuelve la vista
+ * fresca (con_all) y se pinta directo, sin pedirla de nuevo.
+ */
+async function escribirYVer(action, datos, vista, datosVista) {
+  const r = await API.llamarCompleto(action, {
+    ...datos, token: sesion && sesion.token, con_all: vista, con_all_datos: datosVista
+  });
+  if (r.all === undefined) return abrir(vista);  // backend viejo: como antes
+  const clave = claveCache(vista, datosVista);
+  aCache(clave, r.all);
+  recien[clave] = Date.now() + 5000;
+  abrir(vista);
+}
+
+function aviso_toast(texto) {
+  const d = document.createElement('div');
+  d.className = 'aviso alerta';
+  d.textContent = texto;
+  app.prepend(d);
+  setTimeout(() => d.remove(), 4000);
+}
+
 // ---------- login ----------
 
 function pantallaLogin() {
@@ -93,6 +164,7 @@ function pantallaLogin() {
 function salir() {
   sesion = null;
   localStorage.removeItem('sesion');
+  Object.keys(localStorage).filter((k) => k.startsWith('cache:')).forEach((k) => localStorage.removeItem(k));
   pantallaLogin();
 }
 btnSalir.onclick = salir;
@@ -112,6 +184,7 @@ function iniciar() {
 }
 
 function abrir(id) {
+  vistaN++;
   nav.querySelectorAll('button').forEach((b) => b.classList.toggle('activa', b.dataset.id === id));
   pintar('<div class="cargando">Cargando…</div>');
   conError(PESTANAS.find((p) => p.id === id).ver)();
@@ -120,8 +193,10 @@ function abrir(id) {
 // ---------- Hoy ----------
 
 async function verHoy() {
-  const d = await pedir('hoy');
-  const diag = d.diagnostico.length
+  await leer('hoy', {}, pintarHoy);
+}
+
+function pintarHoy(d) {  const diag = d.diagnostico.length
     ? aviso('alerta',
         '<strong>La planilla no coincide con lo que la app espera.</strong><br>' +
         d.diagnostico.map((x) => `${x.hoja}: ${x.detalle}`).join('<br>'))
@@ -157,8 +232,10 @@ function chipEstado(estado) {
 // ---------- Alertas y pendientes ----------
 
 async function verPendientes() {
-  const lista = await pedir('pendientes');
-  if (!lista.length) {
+  await leer('pendientes', {}, pintarPendientes);
+}
+
+function pintarPendientes(lista) {  if (!lista.length) {
     return pintar(aviso('info', 'No hay problemas abiertos. Todo al día.'));
   }
   pintar(`
@@ -208,8 +285,7 @@ function formCerrarPendiente(boton, id) {
   ok.onclick = conError(async () => {
     ok.disabled = true;
     ok.textContent = 'Cerrando…';
-    await pedir('cerrar_pendiente', { id, motivo: mot.value });
-    abrir('pendientes');
+    await escribirYVer('cerrar_pendiente', { id, motivo: mot.value }, 'pendientes', {});
   });
 }
 
@@ -218,8 +294,10 @@ function formCerrarPendiente(boton, id) {
 let equipoActual = 'PC200';
 
 async function verEquipo() {
-  const d = await pedir('equipo', { equipo: equipoActual });
-  pintar(`
+  await leer('equipo', { equipo: equipoActual }, pintarEquipo);
+}
+
+function pintarEquipo(d) {  pintar(`
     <div class="grande" style="grid-template-columns:1fr 1fr;margin-bottom:1rem">
       ${['PC200', 'HIDROMEK'].map((e) => `
         <button data-eq="${e}" style="${e === equipoActual ? '' : 'opacity:.5'}">${e}</button>`).join('')}
@@ -290,8 +368,7 @@ function formAnular(boton, tarjaId) {
   ok.onclick = conError(async () => {
     ok.disabled = true;
     ok.textContent = 'Anulando…';
-    await pedir('anular', { tarja_id: tarjaId, motivo: m.value.trim() });
-    abrir('equipo');
+    await escribirYVer('anular', { tarja_id: tarjaId, motivo: m.value.trim() }, 'equipo', { equipo: equipoActual });
   });
 }
 
@@ -314,8 +391,7 @@ function formCorregirHorometro(boton, d) {
   v.oninput = revisar; m.oninput = revisar;
   ok.onclick = conError(async () => {
     ok.disabled = true;
-    await pedir('corregir_horometro', { equipo: d.equipo, valor: Number(v.value), motivo: m.value.trim() });
-    abrir('equipo');
+    await escribirYVer('corregir_horometro', { equipo: d.equipo, valor: Number(v.value), motivo: m.value.trim() }, 'equipo', { equipo: equipoActual });
   });
 }
 
@@ -324,9 +400,11 @@ function formCorregirHorometro(boton, d) {
 let mesActual = null;
 
 async function verCertificacion() {
-  const d = await pedir('certificacion', mesActual ? { mes: mesActual } : {});
-  mesActual = d.mes;
-  pintar(`
+  await leer('certificacion', mesActual ? { mes: mesActual } : {}, pintarCertificacion);
+}
+
+function pintarCertificacion(d) {
+  mesActual = d.mes;  pintar(`
     <h2>Certificación — ${d.mes}</h2>
     <p class="ayuda">Es lo que se cruza contra el certificado de prestaciones.</p>
     <div class="tarjeta">
